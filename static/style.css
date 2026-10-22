@@ -469,8 +469,48 @@ body {
     padding: 0.5rem;
     gap: 0.5rem;
     overflow-y: auto;
+    /* Включаем аппаратное ускорение для плавного скролла */
+    -webkit-overflow-scrolling: touch; 
   }
 
+  /* УБИРАЕМ ТЯЖЕЛЫЕ ЭФФЕКТЫ ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ */
+  body {
+    background-image: none; /* Убираем сложный градиент фона */
+    background-color: var(--bg-main);
+  }
+
+  .info-panel {
+    background: var(--bg-main); /* Убираем прозрачность */
+    backdrop-filter: none;      /* Отключаем размытие (главный тормоз) */
+    -webkit-backdrop-filter: none;
+    box-shadow: none;           /* Убираем тяжелые тени */
+    border: 1px solid var(--border);
+  }
+
+  .player-wrapper {
+    box-shadow: none;
+    border-radius: var(--radius-md); /* Чуть меньше скругления */
+  }
+
+  /* Убираем тени у карточек каналов */
+  .channel-card-inner {
+    box-shadow: none !important;
+  }
+  .channel-item:hover {
+    transform: none; /* Отключаем анимацию поднятия */
+  }
+
+  .scroll-btn {
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  /* Убираем тень у красной плашки */
+  .live-badge {
+    box-shadow: none;
+  }
+
+  /* ОСТАЛЬНАЯ ВЕРСТКА (без изменений) */
   .top-row { display: contents; }
 
   .video-column {
@@ -491,7 +531,6 @@ body {
     margin-bottom: 0.5rem;
   }
   
-  /* Компактная карусель */
   .carousel-wrapper {
     order: 2;
     width: 100%;
@@ -530,7 +569,6 @@ body {
     padding: 0.75rem;
   }
 
-  /* --- ЛОГИКА ДЛЯ ПЛАШКИ НА ТЕЛЕФОНЕ --- */
   .epg-item {
     padding-right: 1rem;
     align-items: flex-start;
@@ -559,7 +597,6 @@ body {
     margin-top: 0.5rem;
     margin-left: 0;
     display: inline-block;
-    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
   }
 }
 
