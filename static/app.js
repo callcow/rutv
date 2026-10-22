@@ -71,7 +71,6 @@ const nowPlayingText = document.getElementById('nowPlayingText');
 let activeIndex = -1;
 let player = null;
 
-// Сколько передач показывать в списке (включая текущую)
 const EPG_ITEMS_LIMIT = 11;
 
 function initials(name) {
@@ -113,13 +112,12 @@ function parseEPGDate(iso) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// Берёт до `limit` передач, начиная с текущей.
 function takeUpcoming(items, limit) {
   if (!Array.isArray(items) || items.length === 0) return [];
 
   const now = new Date();
-
   let anchorIdx = -1;
+
   for (let i = 0; i < items.length; i++) {
     const s = parseEPGDate(items[i].start_iso);
     const e = parseEPGDate(items[i].stop_iso);
@@ -155,13 +153,11 @@ function updateCurrentEPGHighlight() {
     const start = new Date(startStr);
     const stop = new Date(stopStr);
 
-    const progressBar = item.querySelector('.progress-bar');
-    const progressContainer = item.querySelector('.progress-container');
-    
+    // Проверяем, идет ли передача сейчас
     if (now >= start && now < stop) {
       item.classList.add('now-playing');
       
-      // Добавляем плашку прямо в карточку (а не в текст)
+      // Добавляем плашку "В эфире"
       if (!item.querySelector('.live-badge')) {
         const badge = document.createElement('span');
         badge.className = 'live-badge';
@@ -169,31 +165,30 @@ function updateCurrentEPGHighlight() {
         item.appendChild(badge);
       }
 
-      if (progressBar && progressContainer) {
-        progressContainer.style.display = 'block'; 
-        
-        const total = stop - start;
-        const passed = now - start;
-        let percent = (passed / total) * 100;
-        if (percent < 0) percent = 0;
-        if (percent > 100) percent = 100;
-        
-        progressBar.style.width = `${percent}%`;
-      }
+      // Считаем прогресс и заливаем фон
+      const total = stop - start;
+      const passed = now - start;
+      let percent = (passed / total) * 100;
+      if (percent < 0) percent = 0;
+      if (percent > 100) percent = 100;
+
+      // Применяем градиент к фону
+      item.style.background = `linear-gradient(90deg, rgba(99, 102, 241, 0.35) ${percent}%, rgba(99, 102, 241, 0.05) ${percent}%)`;
+      
     } else {
       item.classList.remove('now-playing');
       
-      // Удаляем плашку
+      // Убираем плашку
       const badge = item.querySelector('.live-badge');
       if (badge) badge.remove();
-
-      if (progressContainer) {
-        progressContainer.style.display = 'none';
-      }
+      
+      // Убираем заливку фона у неактивных
+      item.style.background = ''; 
     }
   });
 }
 
+// Проверяем обновление раз в минуту
 setInterval(updateCurrentEPGHighlight, 60000);
 
 function renderEPG(title) {
@@ -215,9 +210,6 @@ function renderEPG(title) {
           <div class="epg-info-row">
             <span class="epg-title-text">${item.title}</span>
           </div>
-          <div class="progress-container">
-            <div class="progress-bar"></div>
-          </div>
         </span>
       </div>
     `).join('');
@@ -228,7 +220,6 @@ function renderEPG(title) {
   }
 }
 
-// Обновление плашки "Сейчас идёт"
 function updateNowPlayingBanner(channelTitle) {
   if (!nowPlayingText || !nowPlayingBanner) return;
   
