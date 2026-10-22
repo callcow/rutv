@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ТВ Онлайн</title>
+
+<!-- Video.js CSS -->
+<link href="https://vjs.zencdn.net/8.23.8/video-js.css" rel="stylesheet" />
+<!-- Плагин для выбора качества (новый) -->
+<link href="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.css" rel="stylesheet">
+
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+
+  <!-- Шапка -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">TV</div>
+      Онлайн
+    </div>
+    <div class="live-indicator">
+      <div class="live-dot"></div>
+      <span id="nowPlaying">В эфире</span>
+    </div>
+  </header>
+
+  <!-- Основная рабочая область -->
+  <div class="main-container">
+    
+    <!-- Левая часть: Сайдбар с каналами -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Все каналы</h2>
+        <span class="badge" id="channelCount">0</span>
+      </div>
+
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Поиск канала...">
+      </div>
+
+      <div class="channel-list" id="channelList">
+        <!-- Список генерируется через JS -->
+      </div>
+    </aside>
+
+    <!-- Правая часть: Плеер -->
+    <main class="player-section">
+      <div class="video-wrapper">
+        <!-- Заглушка, показывается до выбора канала -->
+        <div class="video-placeholder" id="placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"/>
+            <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+          </svg>
+          <p>Выберите канал слева, чтобы начать просмотр</p>
+        </div>
+        
+        <!-- Контейнер для Video.js -->
+        <div id="video-container" style="width: 100%; height: 100%; display: none;">
+          <video id="video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline></video>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+<script>
+  const ENCODED_CHANNELS = $CHANNELS;
+</script>
+<!-- Video.js JS -->
+<script src="https://vjs.zencdn.net/8.23.8/video.min.js"></script>
+<!-- Плагин выбора качества (новый) -->
+<script src="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.min.js"></script>
+<script src="static/app.js"></script>
+</body>
+</html>

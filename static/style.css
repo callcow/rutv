@@ -1,0 +1,370 @@
+/* --- СБРОС И ПЕРЕМЕННЫЕ --- */
+:root {
+  --bg-base: #08080a;
+  --bg-panel: #121215;
+  --bg-item: #1a1a20;
+  --bg-item-hover: #24242c;
+  --text-main: #f0f0f5;
+  --text-muted: #8e8e9a;
+  --accent: #ff3b5c;
+  --accent-hover: #ff5270;
+  --border: #22222a;
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --radius-sm: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- ШАПКА --- */
+header {
+  height: 64px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 59, 92, 0.1);
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 10px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* --- ОСНОВНОЙ МАКЕТ --- */
+.main-container {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* --- ПЛЕЕР (СЛЕВА) --- */
+.player-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  position: relative;
+  min-width: 0;
+}
+
+.video-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* --- Стили для Video.js, чтобы он заполнял контейнер --- */
+#video-container {
+  width: 100%;
+  height: 100%;
+}
+#video-container .video-js {
+  width: 100%;
+  height: 100%;
+}
+/* --- Кастомизация плеера Video.js --- */
+
+/* Скрываем пункт "subtitles settings" из меню субтитров, оставляя сами дорожки */
+.vjs-texttrack-settings {
+  display: none !important;
+}
+
+/* 1. Основной цвет иконок и текста в плеере (кнопки, время) */
+.video-js {
+  color: #ffffff; 
+  font-family: 'Inter', sans-serif;
+}
+
+/* 2. Прогресс-бар и громкость (акцентный цвет) */
+.video-js .vjs-play-progress,
+.video-js .vjs-volume-level {
+  background-color: var(--accent);
+}
+
+/* 3. Фон панели управления (делаем его чуть темнее и полупрозрачным) */
+.video-js .vjs-control-bar {
+  background-color: rgba(18, 18, 21, 0.85); /* Цвет как у вашего сайдбара, но с прозрачностью */
+  backdrop-filter: blur(8px); /* Легкое размытие фона за панелью */
+  border-top: 1px solid var(--border);
+}
+
+/* 4. Большая кнопка Play по центру */
+.video-js .vjs-big-play-button {
+  background-color: rgba(255, 59, 92, 0.2); /* Полупрозрачный акцент */
+  border: 2px solid var(--accent);
+  border-radius: 50%; /* Делаем её круглой */
+  width: 80px;
+  height: 80px;
+  line-height: 76px; /* Центрируем иконку внутри */
+  margin-top: -40px;
+  margin-left: -40px;
+}
+.video-js:hover .vjs-big-play-button {
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 5. Кнопка выбора качества (если она появится) */
+.video-js .vjs-quality-menu-button .vjs-icon-placeholder:before {
+  color: #ffffff; /* Иконка белая, как остальные */
+}
+
+/* 6. Убираем синюю обводку фокуса при клике (опционально, для эстетики) */
+.video-js *:focus {
+  outline: none;
+}
+
+.video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #151518 0%, #000 100%);
+  gap: 16px;
+  color: var(--text-muted);
+  z-index: 5;
+}
+
+.video-placeholder svg {
+  width: 64px;
+  height: 64px;
+  opacity: 0.2;
+}
+
+.video-placeholder p {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* --- САЙДБАР (СПРАВА) --- */
+.sidebar {
+  width: 340px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border); /* Теперь граница справа */
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 20px 20px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.badge {
+  background: var(--bg-item);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Поиск */
+.search-wrap {
+  padding: 0 20px 16px;
+  position: relative;
+}
+
+.search-wrap input {
+  width: 100%;
+  background: var(--bg-item);
+  border: 1px solid transparent;
+  color: var(--text-main);
+  padding: 12px 16px 12px 40px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s;
+}
+
+.search-wrap input:focus {
+  border-color: var(--accent);
+  background: var(--bg-base);
+}
+
+.search-wrap input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-icon {
+  position: absolute;
+  left: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
+
+/* Список каналов */
+.channel-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.channel-list::-webkit-scrollbar {
+  width: 6px;
+}
+.channel-list::-webkit-scrollbar-thumb {
+  background: var(--bg-item);
+  border-radius: 3px;
+}
+
+/* Карточка канала */
+.channel-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+
+.channel-item:hover {
+  background: var(--bg-item-hover);
+}
+
+.channel-item.active {
+  background: rgba(255, 59, 92, 0.08);
+  border-color: rgba(255, 59, 92, 0.3);
+}
+
+.channel-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--bg-item);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.channel-item.active .channel-logo {
+  background: var(--accent);
+  color: #fff;
+}
+
+.channel-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.channel-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Адаптив для мобилок и планшетов */
+@media (max-width: 900px) {
+  .main-container {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    height: 40vh; 
+  }
+}
+
+/* Бейджик качества HD */
+.quality-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: auto; /* Прижимает бейдж к правому краю */
+  flex-shrink: 0;
+}
+.quality-badge.hd {
+  background: rgba(79, 140, 255, 0.15);
+  color: #4f8cff;
+  border: 1px solid rgba(79, 140, 255, 0.3);
+}
