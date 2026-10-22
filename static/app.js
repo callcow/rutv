@@ -84,6 +84,7 @@ function renderChannels() {
     const item = document.createElement('div');
     item.className = 'channel-item' + (i === activeIndex ? ' active' : '');
 
+    // Плашка HD теперь внутри карточки с логотипом
     const hdBadge = ch.quality === 'HD' ? '<span class="quality-badge hd">HD</span>' : '';
 
     const logoFile = getLogoFile(ch.title);
@@ -93,11 +94,11 @@ function renderChannels() {
 
     item.innerHTML = `
       <div class="channel-card-inner">
+        ${hdBadge}
         <div class="channel-logo">${logoHtml}</div>
       </div>
       <div class="channel-name-wrapper">
         <div class="channel-name" title="${ch.title}">${ch.title}</div>
-        ${hdBadge}
       </div>
     `;
 

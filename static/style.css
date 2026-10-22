@@ -165,12 +165,21 @@ body {
 }
 .channel-item:hover { transform: translateY(-8px); }
 
+/* ОБНОВЛЕННЫЙ КОНТЕЙНЕР ЛОГОТИПА (ДЛЯ ПЛАШКИ HD) */
 .channel-card-inner {
-  width: 100%; aspect-ratio: 16 / 9; background: var(--bg-item);
-  border-radius: var(--radius-md); display: flex;
-  align-items: center; justify-content: center; overflow: hidden;
-  border: 2px solid transparent; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0; box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  width: 100%; 
+  aspect-ratio: 16 / 9; 
+  background: var(--bg-item);
+  border-radius: var(--radius-md); 
+  display: flex;
+  align-items: center; 
+  justify-content: center; 
+  overflow: hidden;
+  border: 2px solid transparent; 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0; 
+  box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  position: relative; /* ВАЖНО для плашки */
 }
 
 .channel-item:hover .channel-card-inner { background: var(--bg-item-hover); box-shadow: 0 12px 24px rgba(0,0,0,0.5); }
@@ -197,9 +206,19 @@ body {
 .channel-item:hover .channel-name { color: var(--text-main); }
 .channel-item.active .channel-name { color: var(--accent-hover); }
 
+/* ПЛАШКА HD В УГЛУ КАРТОЧКИ */
 .quality-badge.hd {
-  font-size: 0.6rem; font-weight: 900; padding: 2px 6px;
-  border-radius: 4px; background: var(--accent); color: #fff; flex-shrink: 0;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--accent); 
+  color: #fff;
+  z-index: 2;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
 
 .channel-info, .channel-meta { display: none; }
@@ -292,7 +311,15 @@ body {
     overflow: hidden; text-overflow: ellipsis; line-height: 1.1; 
     text-align: center; width: 100%; overflow-wrap: break-word; hyphens: auto;
   }
-  .quality-badge.hd { font-size: 0.35rem; padding: 0px 2px; line-height: 1; border-radius: 2px; margin-top: 1px; }
+  
+  .quality-badge.hd { 
+    font-size: 0.35rem; 
+    padding: 1px 3px; 
+    border-radius: 2px; 
+    top: 2px;
+    right: 2px;
+  }
+  
   .scroll-btn { display: flex !important; width: 1.25rem; height: 1.25rem; font-size: 0.8rem; background: var(--bg-item-hover); }
 
   .info-panel { order: 3; width: 100%; flex: none; border-radius: var(--radius-xl); padding: 0.75rem; }
@@ -300,13 +327,13 @@ body {
   /* КАРТОЧКИ ПЕРЕДАЧ НА ТЕЛЕФОНЕ */
   .epg-item { 
     display: flex; 
-    align-items: center; /* Выравниваем по центру */
+    align-items: center; 
     padding: 0.75rem 1rem; 
-    padding-right: 6rem; /* Отступ для плашки */
+    padding-right: 6rem; 
   }
   
   .epg-time { 
-    position: static; /* Убираем абсолют */
+    position: static; 
     font-size: 0.9rem; 
   }
 
@@ -317,10 +344,9 @@ body {
   }
 
   .epg-info-row { 
-    display: block; /* Убираем флекс, чтобы текст переносился как надо */
+    display: block; 
   }
 
-  /* Возвращаем плашку в абсолют, так как она теперь снова справа */
   .live-badge { 
     position: absolute; 
     right: 0.75rem; 
