@@ -2,9 +2,7 @@ name: Build TV page
 
 on:
   schedule:
-    # Cron в GitHub Actions работает в UTC.
-    # 7:00 UTC = 10:00 МСК.
-    # */5 в поле "день месяца" = 5,10,15,20,25,30 число каждого месяца.
+    # 7:00 UTC = 10:00 МСК. */5 = 5,10,15,20,25,30 число месяца.
     - cron: '0 7 */5 * *'
   workflow_dispatch:
 
