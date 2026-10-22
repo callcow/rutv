@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ТВ Онлайн</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0c;
+    --bg-elev: #131318;
+    --bg-hover: #1a1a22;
+    --border: #23232c;
+    --text: #e8e8ed;
+    --text-dim: #8a8a96;
+    --accent: #4f8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow: hidden;
+  }
+  .app { display: grid; grid-template-columns: 1fr 340px; height: 100vh; gap: 1px; background: var(--border); }
+  .player-area { display: flex; flex-direction: column; background: var(--bg); min-width: 0; }
+  .topbar {
+    display: flex; align-items: center; gap: 16px; padding: 16px 24px;
+    background: var(--bg-elev); border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #4f8cff, #a855f7);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .now-playing {
+    display: flex; align-items: center; gap: 10px; padding: 6px 14px;
+    background: var(--bg-hover); border-radius: 100px; font-size: 13px; color: var(--text-dim);
+  }
+  .now-playing .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .now-playing .name { color: var(--text); font-weight: 600; }
+  .player-wrap { flex: 1; display: flex; align-items: center; justify-content: center; background: #000; position: relative; min-height: 0; overflow: hidden; }
+  .player-wrap video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .player-placeholder {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 20px;
+    background: radial-gradient(circle at center, #131318 0%, #0a0a0c 100%); pointer-events: none;
+  }
+  .player-placeholder svg { width: 80px; height: 80px; color: var(--text-dim); opacity: 0.4; }
+  .player-placeholder p { color: var(--text-dim); font-size: 15px; }
+  .sidebar { display: flex; flex-direction: column; background: var(--bg-elev); min-height: 0; }
+  .sidebar-header { padding: 20px 20px 12px; display: flex; align-items: center; justify-content: space-between; }
+  .sidebar-header h2 { font-size: 15px; font-weight: 600; }
+  .channel-count { font-size: 12px; color: var(--text-dim); background: var(--bg-hover); padding: 3px 9px; border-radius: 100px; }
+  .search-box { margin: 0 20px 14px; position: relative; }
+  .search-box input {
+    width: 100%; padding: 10px 14px 10px 38px; background: var(--bg-hover);
+    border: 1px solid transparent; border-radius: 10px; color: var(--text);
+    font-size: 13px; outline: none; transition: border-color 0.2s;
+  }
+  .search-box input:focus { border-color: var(--accent); }
+  .search-box input::placeholder { color: var(--text-dim); }
+  .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-dim); }
+  .channel-list { flex: 1; overflow-y: auto; padding: 0 12px 20px; scrollbar-width: thin; }
+  .channel-list::-webkit-scrollbar { width: 6px; }
+  .channel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .channel-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: 10px; cursor: pointer; transition: background 0.15s; margin-bottom: 2px;
+  }
+  .channel-item:hover { background: var(--bg-hover); }
+  .channel-item.active {
+    background: linear-gradient(90deg, rgba(79,140,255,0.15), rgba(79,140,255,0.05));
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .channel-logo {
+    width: 40px; height: 40px; border-radius: 8px; background: var(--bg-hover);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: var(--text-dim); flex-shrink: 0;
+  }
+  .channel-item.active .channel-logo { background: rgba(79,140,255,0.2); color: var(--accent); }
+  .channel-info { flex: 1; min-width: 0; }
+  .channel-name { font-size: 13.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .channel-meta { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+  .live-badge { font-size: 10px; font-weight: 700; color: #22c55e; background: rgba(34,197,94,0.12); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px; flex-shrink: 0; }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 1fr 45vh; }
+    .sidebar { border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="player-area">
+    <div class="topbar">
+      <div class="logo">ТВ Онлайн</div>
+      <div class="now-playing">
+        <span class="dot"></span>
+        <span class="name" id="nowPlaying">Выберите канал</span>
+      </div>
+    </div>
+    <div class="player-wrap">
+      <div class="player-placeholder" id="placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="4" width="20" height="16" rx="2"/>
+          <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+        </svg>
+        <p>Выберите канал для просмотра</p>
+      </div>
+      <video id="video" controls playsinline muted></video>
+    </div>
+  </main>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Каналы</h2>
+      <span class="channel-count" id="channelCount">0</span>
+    </div>
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/>
+        <path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Поиск канала...">
+    </div>
+    <div class="channel-list" id="channelList"></div>
+  </aside>
+</div>
+
+<script>
+  const CHANNELS = [
+  {
+    "title": "Первый Канал",
+    "stream": "https://edge05p.mediavitrina.ru/hls-livef5/1tv/index.m3u8?token=v2.l8krQs6eeiaUDlddjSb9OZODMnxbVmHkPZrLxiqiuQc.xWy8u0kSJYB1h5TY_T79mmKT6U55xS3ac9EUSccbwTg.1793275861.22c57057d3413fbf1b85fbb26226c46c"
+  },
+  {
+    "title": "Россия 1",
+    "stream": "https://edge01d.mediavitrina.ru/hls-livef5/russia1/index.m3u8?token=v2.rajGeQZ2K42AVCChAivSZkE2UpRfumJeS1bBGFxVr8Y.68aAvdngra_IaKNtAudarsK1_9XlBjbzV1CGyBcL_Y4.1793275861.d28bb4fb37de895d79264c8c3dcde255"
+  },
+  {
+    "title": "Матч ТВ",
+    "stream": "https://edge02r.mediavitrina.ru/hls-livef6/matchtv/index.m3u8?token=v2.323EKzBkoXAAeiW1c1Pdz0cvwxy9BzmsBmynjhKefF0.vp_9TJUfUX5w6SvCnvLXiDea85DosKGm65lqB5XK3WA.1793275861.bcfff13d71f15ded80c2c0fa43c6e26d"
+  },
+  {
+    "title": "НТВ",
+    "stream": "https://edge01d.mediavitrina.ru/hls-livef5/ntv_msk/index.m3u8?token=v2.wMy6fnALNVhH50EeuN--Z9_JFR7DSXa8nQFsR5uR8Ss.zxoBqmV0ujYZdgpui9s4KxUHWmWmOcDPw9u9-6ZkYqg.1793275861.1e0a650224b04960b8f0188916fe0ea6"
+  },
+  {
+    "title": "Пятый канал",
+    "stream": "https://edge02p.mediavitrina.ru/hls-livef7/5tv/index.m3u8?token=v2.kfXwyKHA9giQ3hIIHStACOJ8P4cAS7aNYA9yJNmELd0.07DtiLRnx4uiU5ywUp8UHPoWCdTaz7p-uDry7f-5MU8.1793275861.43e0749a2e4acecb91355339df747f09"
+  },
+  {
+    "title": "Россия К",
+    "stream": "https://edge02d.mediavitrina.ru/hls-livef7/russiak/index.m3u8?token=v2.ne8ZPhfUQouBIojHGv4Yhx1ysLgBomVgLSFSdwRqicI.g4nhv8OATysbmArY5qAEhEmOnf7fLq6xkGKIJi6XoRg.1793275861.75e8a4a0c90c554934e30196702ba897"
+  },
+  {
+    "title": "Россия 24",
+    "stream": "https://edge07d.mediavitrina.ru/hls-livef5/russia24/index.m3u8?token=v2.XN2jKywu5EmU8cU4_U_eVqpQ7GxInCwZFaMIqtGrFKM.Pyhlqs_54aNOW7AeQGnbD2rZn53Wtp60qSgpFHTfMY8.1793275861.067ebd5a1b04f507ddca002cb54584ac"
+  },
+  {
+    "title": "Карусель",
+    "stream": "https://edge02d.mediavitrina.ru/hls-livef7/karuselhd/index.m3u8?token=v2.9MQeEi0CakCoPL28u70GgwRjGeQQetkLH9fNBZb0Nxg.wVKxzVJh50Vksw--_6zqN-7BQofvFWSC8i3_JqZgM48.1793275861.2375b7a12bcd616680187fb1836400e5"
+  },
+  {
+    "title": "ОТР",
+    "stream": "https://edge01p.mediavitrina.ru/hls-livef5/otr_0/index.m3u8?token=v2.v3-kFI9hc6an7jxJA9wXf29KbQ6qMw7-6HaZOioIKZg.r4RkRYwknyxrTJlxQNsPtca7inofCkrAdcDWfiGwga4.1793275861.489f39e7ecacd7fbab922b26dd724c0f"
+  },
+  {
+    "title": "ТВ Центр",
+    "stream": "https://edge01p.mediavitrina.ru/hls-livef5/tvc/index.m3u8?token=v2.A4KDM_RqX_FNjQIBNEky9hfZJLd0RSXUd6jwiyhzt7g.9UOCmcUajYJHYbnlwNOw45Cn7q1GcMDMnW2BrphghTY.1793275861.01a8398fd0ab26c3470aff4b8d0bdcab"
+  },
+  {
+    "title": "РЕН ТВ",
+    "stream": "https://edge06d.mediavitrina.ru/hls-livef6/ren-tv/index.m3u8?token=v2.7I8SSb2KN8thCR20ZYFo_J0S4ssda1HbOWZAAVFWBXk.MFvTaU41pZgw9nL9iXtWgg0YRqXZICFsT854KmOQjTQ.1793275862.35e3588d14636ccb04fee15f7504aeee"
+  },
+  {
+    "title": "СПАС",
+    "stream": "https://edge08d.mediavitrina.ru/hls-livef6/spas/index.m3u8?token=v2.u-roV9Dt24Y-bcZxeqDt2HO1tAbnkkdFOYTZUhkKASo.fj-bwEdofzZG7kOsLH0Qrsj9Ra3PPabZiGVETO8trUQ.1793275862.6fcee4d20f2cef4b365e51e94eebcf0a"
+  },
+  {
+    "title": "СТС",
+    "stream": "https://edge01p.mediavitrina.ru/hls-livef5/ctc/index.m3u8?token=v2.F7p6ZNgqfp27RinjtZWqllyCyo08K_UdaaM0QdCH-Cc.VRsVyfCYN7f4XMRHnWdJOYewAbbzj6NejbL3njuGPMA.1793275862.67f6096e926a35f1d1b4c4cd358fd9b2"
+  },
+  {
+    "title": "Домашний",
+    "stream": "https://edge04p.mediavitrina.ru/hls-livef6/ctc-dom/index.m3u8?token=v2.0NqrHfpn5V5pSFvMpwT1inwZfcGB5L_sfYTcknoIClQ.dlmuP9vySQOHimfyM-YnD6ynuCqFAFIWP47O0z48GQk.1793275862.b11ebeb34d9854b154c24ba10259fd7a"
+  },
+  {
+    "title": "ТВ-3",
+    "stream": "https://edge02p.mediavitrina.ru/hls-livef7/tv3/index.m3u8?token=v2.vsDzmWCcHHgfhwlQu0ofPInTq2UqYW-yqleYuEvyHOI.7iAh2J0EQrmWS-qX_HwNPJW4fNqEgnFqaHi7w7yCSeI.1793275862.f783d0494f47f1671d7ddd66e0a52759"
+  },
+  {
+    "title": "Пятница",
+    "stream": "https://edge07r.mediavitrina.ru/hls-livef7/friday/index.m3u8?token=v2.072xH7L3EuhK3nBD9aMCGKf6JJSccDVi5_o4LJbm3oI.Xmr6VZFse3RCWmutWXTtQqWkCPv2_HKLCooJ6-SZPcY.1793275862.5b7a7c085a96312d485e1c670e23974d"
+  },
+  {
+    "title": "Звезда",
+    "stream": "https://edge01d.mediavitrina.ru/hls-livef7/zvezda0/index.m3u8?token=v2.1_L4jZ-Ma7MJChY3nFpWh9bcQlLyMTgk0tTi6uBHZr8.7-8-lYuGo9ajaHkjC3mss6d0ROhlJahoP60NTE1DMIw.1793275862.c095f072f6307d401cc9779a02528f22"
+  },
+  {
+    "title": "МИР",
+    "stream": "https://edge05p.mediavitrina.ru/hls-livef7/mir/index.m3u8?token=v2.VmGCTL4KQVuxEzbG-ckVhTwEedzi0z-6voEXXcY2h1E.GlVzdaFu-XbKnM6sHCJ-DOJz6orlQbPDXUFYZhwPs_0.1793275862.0cdd935c3ce2325a707a06ece584a13a"
+  },
+  {
+    "title": "ТНТ",
+    "stream": "https://edge02d.mediavitrina.ru/hls-livef7/tnt/index.m3u8?token=v2.eJkSfXnCW66N6iaYOWLdrxhtTMHN_fOzo7ws24ukm6o.zRhTd0kFunOwFk-ZL68EJlOI1B8hWqF464wk8O99gro.1793275862.a73c19bb5a06b2321f740639df72f01e"
+  },
+  {
+    "title": "Муз-ТВ",
+    "stream": "https://edge01p.mediavitrina.ru/hls-livef2/muztv/index.m3u8?token=v2.xZMDkcFp2H_b7FSWDnMsliyUh2BeENrQyB69eI-JelU.OSP1FiAnQrcOb40C39zzMFL_DvFjJBmgf47Ak2H-c74.1793275862.fb2d0cbe6dd31513b9f578e62558190f"
+  },
+  {
+    "title": "Че",
+    "stream": "https://edge01d.mediavitrina.ru/hls-livef5/ctc-che/index.m3u8?token=v2.55YQ-qiPcmMRNTQR1qlnyuxJWytbWU_07EewnSpFtBs.Zcdmu6kjUxKLIm4uFqN0O8colSZ_lj6KJr75UD5gYws.1793275862.0d0c60292446381d3e2687ca950feb3d"
+  },
+  {
+    "title": "Известия",
+    "stream": "https://edge02p.mediavitrina.ru/hls-livef7/izvestia/index.m3u8?token=v2.WuiJkvI0DnbG2RnhEs9bvSnrVe3Wd8kLnBZzjQ6XCD8.vy8C_gmxlcfZn0oPcFAcrtuQlmNqGwZ7lxAGZEjFtPk.1793275862.1d244541cf3f9e9b0959cebf3bff55a2"
+  },
+  {
+    "title": "СТС Love",
+    "stream": "https://edge02r.mediavitrina.ru/hls-livef6/ctc-love/index.m3u8?token=v2.QncXFcrwC-WJWgiVz5GdvkN0d08_6ECZRwdDROSG0S4.ibKv6NgR6IIZp61g11JQ53n5UFzVjc3Pkdiw68G7okA.1793275862.ddfe43606870972f3e85fa890eb397f6"
+  },
+  {
+    "title": "Ю",
+    "stream": "https://edge01r.mediavitrina.ru/hls-livef5/yu/index.m3u8?token=v2.TzvNjWLGWnVxOCs3QMqFVysNFR3oYHnRSHvUeZVPUA8.wMqTxu1xjAXzGqWycFka1SgxwjNv6EhXd-Rfith8LL8.1793275862.e4bf714a822c0dfd37dab15803072049"
+  },
+  {
+    "title": "Солнце",
+    "stream": "https://edge02r.mediavitrina.ru/hls-livef6/solntse/index.m3u8?token=v2.Ui0FL0M61BL3CFOX03dPG0s4KjNDurtCPDcL5aZjYkw.GuYf105WF7FU7t4DSONxzbsmUN2Hu_f5vU5iMR7aU1U.1793275862.741a85d36ba6c99fe27da3e5e7e28b49"
+  },
+  {
+    "title": "Суббота",
+    "stream": "https://edge08r.mediavitrina.ru/hls-livef7/subbota/index.m3u8?token=v2.otReNtFr9niVmdbyl3v6ZENcYuGm0_bRjPmyVtnj-PQ.en2e0xJTfuES7XUYb9e7MWuKi2wRg3BzlgwfWz2VLxg.1793275862.68acf188d5260f4f8bb51182190fd4c5"
+  },
+  {
+    "title": "Телеканал 78",
+    "stream": "https://edge06r.mediavitrina.ru/hls-livef5/channel78/index.m3u8?token=v2.upiccoz35upMUtEH_BaGeRRwr7EskAId1VFN5TioxdE.ppCej3LQ858_ZWpqzI1VWKX4nu3P1FxuBR1twYb3VME.1793275862.83df9bbdf199234b8d4d34f4b0a67845"
+  },
+  {
+    "title": "Кино ТВ",
+    "stream": "https://edge08d.mediavitrina.ru/hls-livef6/kinotv/index.m3u8?token=v2.9wrhI_8Vd3NftWx7HdMxRWR3oKYoxvc9C4TmaoVuhLY.8elVca9DBrLXnTNkDzZg2OkCJJ3FtluBv0DToEsekeA.1793275862.0c6ad91b8ef2dce910f1051aae94e9cf"
+  },
+  {
+    "title": "КиноСезон",
+    "stream": "https://edge01r.mediavitrina.ru/hls-livef2/kinosezon/index.m3u8?token=v2.rIo3HbUZ94bMhbd8mhMuhHwsCVP_xCATtwAiU8golHk.okpZnZ4rASKdnGyFMFaQOgHLTruOAs1j5EShIe64MPI.1793275862.99688a2984aaad599697f1ce468f8278"
+  },
+  {
+    "title": "ЦТВ",
+    "stream": "https://edge04p.mediavitrina.ru/hls-livef2/ctv/index.m3u8?token=v2.oK415bR7cMkmnhNC-p5ssMPdRzRAmGCWYk0bpqdpPng.MjKXY-Z9fxt82Q63Ou0K9Fz26A9SEvmw6eykAVRKNbY.1793275862.391bc622b611c9583da27c31ce7fba80"
+  }
+];
+
+  const channelListEl = document.getElementById('channelList');
+  const channelCountEl = document.getElementById('channelCount');
+  const searchInput = document.getElementById('searchInput');
+  const nowPlayingEl = document.getElementById('nowPlaying');
+  const video = document.getElementById('video');
+  const placeholder = document.getElementById('placeholder');
+
+  let activeIndex = -1;
+  let hls = null;
+
+  function initials(name) {
+    return name.split(/[\s\-_]+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
+  }
+
+  function renderChannels(filter = '') {
+    channelListEl.innerHTML = '';
+    const q = filter.toLowerCase();
+    CHANNELS.forEach((ch, i) => {
+      if (q && !ch.title.toLowerCase().includes(q)) return;
+      const item = document.createElement('div');
+      item.className = 'channel-item' + (i === activeIndex ? ' active' : '');
+      item.innerHTML = `
+        <div class="channel-logo">${initials(ch.title)}</div>
+        <div class="channel-info">
+          <div class="channel-name">${ch.title}</div>
+          <div class="channel-meta">LIVE</div>
+        </div>
+        <span class="live-badge">LIVE</span>
+      `;
+      item.addEventListener('click', () => selectChannel(i));
+      channelListEl.appendChild(item);
+    });
+  }
+
+  function selectChannel(i) {
+    if (i < 0 || i >= CHANNELS.length) return;
+    activeIndex = i;
+    const ch = CHANNELS[i];
+    nowPlayingEl.textContent = ch.title;
+    placeholder.style.display = 'none';
+    renderChannels(searchInput.value);
+
+    if (hls) { hls.destroy(); hls = null; }
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = ch.stream;
+      video.play().catch(() => {});
+    } else if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({ lowLatencyMode: true });
+      hls.loadSource(ch.stream);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) console.error('HLS error:', d); });
+    } else {
+      console.error('HLS не поддерживается');
+    }
+  }
+
+  searchInput.addEventListener('input', (e) => renderChannels(e.target.value));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); selectChannel(activeIndex + 1); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); selectChannel(activeIndex - 1); }
+  });
+
+  channelCountEl.textContent = CHANNELS.length;
+  renderChannels();
+  if (CHANNELS.length) selectChannel(0);
+</script>
+</body>
+</html>
