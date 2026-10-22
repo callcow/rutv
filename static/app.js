@@ -155,18 +155,18 @@ function updateCurrentEPGHighlight() {
     const start = new Date(startStr);
     const stop = new Date(stopStr);
 
-    const titleRow = item.querySelector('.epg-info-row');
     const progressBar = item.querySelector('.progress-bar');
     const progressContainer = item.querySelector('.progress-container');
     
     if (now >= start && now < stop) {
       item.classList.add('now-playing');
       
-      if (titleRow && !titleRow.querySelector('.live-badge')) {
+      // Добавляем плашку прямо в карточку (а не в текст)
+      if (!item.querySelector('.live-badge')) {
         const badge = document.createElement('span');
         badge.className = 'live-badge';
         badge.textContent = 'В эфире';
-        titleRow.appendChild(badge);
+        item.appendChild(badge);
       }
 
       if (progressBar && progressContainer) {
@@ -183,10 +183,9 @@ function updateCurrentEPGHighlight() {
     } else {
       item.classList.remove('now-playing');
       
-      if (titleRow) {
-        const badge = titleRow.querySelector('.live-badge');
-        if (badge) badge.remove();
-      }
+      // Удаляем плашку
+      const badge = item.querySelector('.live-badge');
+      if (badge) badge.remove();
 
       if (progressContainer) {
         progressContainer.style.display = 'none';
@@ -229,7 +228,7 @@ function renderEPG(title) {
   }
 }
 
-// Обновление плашки "Сейчас идёт" (ОБЪЕДИНЕНО В ОДИН ТЕГ)
+// Обновление плашки "Сейчас идёт"
 function updateNowPlayingBanner(channelTitle) {
   if (!nowPlayingText || !nowPlayingBanner) return;
   
@@ -261,7 +260,6 @@ function updateNowPlayingBanner(channelTitle) {
     }
   }
 
-  // Если текущей нет, берем первую, которая начнется
   if (!currentProg) {
     for (let i = 0; i < channelEpg.length; i++) {
        const start = parseEPGDate(channelEpg[i].start_iso);
@@ -272,7 +270,6 @@ function updateNowPlayingBanner(channelTitle) {
     }
   }
 
-  // Вставляем всё в один HTML-элемент
   const progTitle = currentProg ? currentProg.title : 'Программа не найдена';
   nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> ${progTitle}`;
 
@@ -346,7 +343,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft')  { e.preventDefault(); selectChannel(activeIndex - 1); }
 });
 
-// Обновление при возврате на вкладку
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && activeIndex >= 0 && CHANNELS[activeIndex]) {
     renderEPG(CHANNELS[activeIndex].title);
