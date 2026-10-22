@@ -1,4 +1,4 @@
-// Функция для расшифровки Base64 (работает с кириллицей)
+// Функция для расшифровки Base64
 function decodeBase64Json(encodedStr) {
   try {
     const binaryStr = atob(encodedStr);
@@ -17,48 +17,45 @@ function decodeBase64Json(encodedStr) {
 const CHANNELS = typeof ENCODED_CHANNELS !== 'undefined' ? decodeBase64Json(ENCODED_CHANNELS) : [];
 
 const channelListEl = document.getElementById('channelList');
-const channelCountEl = document.getElementById('channelCount');
-const searchInput = document.getElementById('searchInput');
 const nowPlayingEl = document.getElementById('nowPlaying');
+const infoTitle = document.getElementById('infoTitle');
+const infoLogo = document.getElementById('infoLogo');
 const placeholder = document.getElementById('placeholder');
 const videoContainer = document.getElementById('video-container');
+const scrollRightBtn = document.getElementById('scrollRightBtn');
 
 let activeIndex = -1;
 let player = null;
 
-function initials(name) {
-  return name.split(/[\s\-_]+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
+// Генерируем красивое короткое имя для логотипа
+function getLogoText(name) {
+    const cleanName = name.replace(/[^\w\sа-яА-Я]/gi, '');
+    if (cleanName.includes('Первый')) return '1';
+    if (cleanName.includes('Россия 1')) return 'Р1';
+    if (cleanName.includes('Россия 24')) return '24';
+    if (cleanName.includes('Матч')) return 'М';
+    if (cleanName.includes('НТВ')) return 'НТВ';
+    if (cleanName.includes('Пятый')) return '5';
+    return cleanName.substring(0, 2).toUpperCase(); // Первые 2 буквы
 }
 
-function renderChannels(filter = '') {
+function renderChannels() {
   channelListEl.innerHTML = '';
-  const q = filter.toLowerCase();
-  let visibleCount = 0;
   
   CHANNELS.forEach((ch, i) => {
-    if (q && !ch.title.toLowerCase().includes(q)) return;
-    visibleCount++;
-    
     const item = document.createElement('div');
     item.className = 'channel-item' + (i === activeIndex ? ' active' : '');
-    // Показываем бейдж только если качество HD
-    const qualityBadge = ch.quality === 'HD' ? '<span class="quality-badge hd">HD</span>' : '';
+    
+    const qualityBadge = ch.quality === 'HD' ? '<span class="quality-badge">HD</span>' : '';
+    const logoText = getLogoText(ch.title);
 
     item.innerHTML = `
-      <div class="channel-logo">${initials(ch.title)}</div>
-      <div class="channel-info">
-        <div class="channel-name" title="${ch.title}">${ch.title}</div>
-        <div class="channel-meta">В эфире</div>
-      </div>
       ${qualityBadge}
+      <div class="channel-logo">${logoText}</div>
     `;
     item.addEventListener('click', () => selectChannel(i));
     channelListEl.appendChild(item);
   });
-
-  if (visibleCount === 0) {
-    channelListEl.innerHTML = '<div style="text-align:center; color:var(--text-muted); margin-top:20px; font-size:14px;">Ничего не найдено</div>';
-  }
 }
 
 function selectChannel(i) {
@@ -66,63 +63,76 @@ function selectChannel(i) {
   activeIndex = i;
   const ch = CHANNELS[i];
   
-  // Обновляем интерфейс
+  // Обновляем правую панель
+  infoTitle.textContent = ch.title;
+  infoLogo.textContent = getLogoText(ch.title);
   nowPlayingEl.textContent = ch.title;
+  
+  // Прячем заглушку, показываем плеер
   placeholder.style.display = 'none';
   videoContainer.style.display = 'block';
   
-  renderChannels(searchInput.value);
+  renderChannels();
 
-  const activeItem = channelListEl.querySelector('.channel-item.active');
+  const activeItem = channelListEl.children[i];
   if (activeItem) {
-    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
 
-  // Инициализируем Video.js, если еще не создан
+  // Инициализируем Video.js
   if (!player) {
     player = videojs('video', {
       controls: true,
       autoplay: true,
       preload: 'auto',
       fluid: false,
-      textTrackSettings: false, // Отключаем диалог настроек субтитров
-      html5: {
-        vhs: {
-          overrideNative: true
-        }
-      }
+      textTrackSettings: false,
+      html5: { vhs: { overrideNative: true } }
     });
 
-// Подключаем плагин выбора качества (если поток адаптивный)
     if (player.qualityMenu) {
       player.qualityMenu();
     }
   }
 
-  // Меняем источник видео
-  player.src({
-    src: ch.stream,
-    type: 'application/x-mpegURL'
-  });
-  
-  // Запускаем воспроизведение
-  player.play().catch(() => {
-    // Браузер может заблокировать автоплей, если видео со звуком
-    // Просто игнорируем, пользователь нажмет play
+  // Запускаем поток
+  player.src({ src: ch.stream, type: 'application/x-mpegURL' });
+  player.play().catch(() => {});
+}
+
+const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+
+// Логика прокрутки
+if (scrollLeftBtn) {
+  scrollLeftBtn.addEventListener('click', () => {
+    channelListEl.scrollBy({ left: -400, behavior: 'smooth' });
   });
 }
 
-// Обработка поиска
-searchInput.addEventListener('input', (e) => renderChannels(e.target.value));
+if (scrollRightBtn) {
+  scrollRightBtn.addEventListener('click', () => {
+    channelListEl.scrollBy({ left: 400, behavior: 'smooth' });
+  });
+}
 
-// Обработка клавиатуры
+// Показываем/скрываем левую кнопку в зависимости от прокрутки
+channelListEl.addEventListener('scroll', () => {
+  if (scrollLeftBtn) {
+    if (channelListEl.scrollLeft > 0) {
+      scrollLeftBtn.style.display = 'flex'; // Показываем
+    } else {
+      scrollLeftBtn.style.display = 'none'; // Скрываем
+    }
+  }
+});
+
+// Клавиатура
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowDown') { e.preventDefault(); selectChannel(activeIndex + 1); }
-  if (e.key === 'ArrowUp')   { e.preventDefault(); selectChannel(activeIndex - 1); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); selectChannel(activeIndex + 1); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); selectChannel(activeIndex - 1); }
 });
 
 // Инициализация
-channelCountEl.textContent = CHANNELS.length;
 renderChannels();
 if (CHANNELS.length > 0) {
   selectChannel(0);

@@ -7,58 +7,28 @@
 
 <!-- Video.js CSS -->
 <link href="https://vjs.zencdn.net/8.23.8/video-js.css" rel="stylesheet" />
-<!-- Плагин для выбора качества (новый) -->
+<!-- Плагин для выбора качества -->
 <link href="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.css" rel="stylesheet">
 
 <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 
-  <!-- Шапка -->
-  <header>
-    <div class="logo">
-      <div class="logo-icon">TV</div>
-      Онлайн
-    </div>
-    <div class="live-indicator">
-      <div class="live-dot"></div>
-      <span id="nowPlaying">В эфире</span>
-    </div>
-  </header>
-
-  <!-- Основная рабочая область -->
-  <div class="main-container">
+  <!-- Основной контейнер -->
+  <div class="layout">
     
-    <!-- Левая часть: Сайдбар с каналами -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2>Все каналы</h2>
-        <span class="badge" id="channelCount">0</span>
-      </div>
-
-      <div class="search-wrap">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input type="text" id="searchInput" placeholder="Поиск канала...">
-      </div>
-
-      <div class="channel-list" id="channelList">
-        <!-- Список генерируется через JS -->
-      </div>
-    </aside>
-
-    <!-- Правая часть: Плеер -->
-    <main class="player-section">
-      <div class="video-wrapper">
-        <!-- Заглушка, показывается до выбора канала -->
+    <!-- Верхняя часть: Плеер и Инфо-панель -->
+    <div class="top-row">
+      
+      <!-- Плеер -->
+      <div class="player-wrapper">
+        <!-- Заглушка -->
         <div class="video-placeholder" id="placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="4" width="20" height="16" rx="2"/>
             <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
           </svg>
-          <p>Выберите канал слева, чтобы начать просмотр</p>
+          <p>Выберите канал ниже</p>
         </div>
         
         <!-- Контейнер для Video.js -->
@@ -66,16 +36,42 @@
           <video id="video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline></video>
         </div>
       </div>
-    </main>
+
+      <!-- Панель информации справа (как в референсе) -->
+      <div class="info-panel">
+        <div class="channel-header">
+          <div class="big-logo" id="infoLogo">1</div>
+          <div class="channel-title" id="infoTitle">Первый Канал</div>
+        </div>
+        <div class="epg-list">
+          <!-- Здесь в будущем может быть сетка передач. Пока просто заполним заглушками для красоты -->
+          <div class="epg-item">
+            <span class="epg-time">Сейчас</span>
+            <span class="epg-name" id="nowPlaying">Выберите канал</span>
+          </div>
+          <div class="epg-item">
+            <span class="epg-time">Далее</span>
+            <span class="epg-name">Программа передач</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Нижняя часть: Карусель каналов -->
+    <div class="carousel-wrapper">
+      <button class="scroll-btn" id="scrollLeftBtn" style="display: none;">‹</button>
+      <div class="channel-carousel" id="channelList">
+        <!-- Список генерируется через JS -->
+      </div>
+      <button class="scroll-btn" id="scrollRightBtn">›</button>
+    </div>
 
   </div>
 
 <script>
   const ENCODED_CHANNELS = "W3sidGl0bGUiOiLQn9C10YDQstGL0Lkg0JrQsNC90LDQuyIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTA3ci5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNS8xdHYvaW5kZXgubTN1OD90b2tlbj12Mi5NTWdLT2FwUXR3NnV6N0JocmlxeEFmMUw0ZEYwd0xpakZ1VjBSYlZJcWxVLll0RVhtY3ZJU3h3elhHVlpzX1BLNVFkNmpBYWhOOEhHR0FBYkNjT3R3YUUuMTc5MzI4MDQ5OC5jYTY3NzYwMTI1YjAwMTRmNmY0MmM2NTNmODQ5YTllOCIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQoNC+0YHRgdC40Y8gMSIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAzcC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNi9ydXNzaWExL2luZGV4Lm0zdTg/dG9rZW49djIuZy1DaGU5aVJHUTd4U3VfcldWOGVKWlFnYlNkb3pvaW13dEh4NDJsMmczNC5ZNGQ5M25YX3kzZXE3NXFta3B3Z0RBQ2ZrMU5xdmFlTHVVdW45RHkxMldvLjE3OTMyODA0OTkuNzEzYjgyNDZkMGVlZGIzNmVkODk0NzE5NDhkNzkyOTEiLCJxdWFsaXR5IjoiSEQifSx7InRpdGxlIjoi0JzQsNGC0Ycg0KLQkiIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTA1cC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNS9tYXRjaHR2L2luZGV4Lm0zdTg/dG9rZW49djIuWlhoVDVObFZKM3FZVjNxZzFzaF9SRkxkUjh3QU9sRTZDZ09sTE0xcG1jQS5sSGw2NVZFRWFva1FwdVpwSlU3N1lIRjlOaVdmWFhHYVF3RTJIMnhTVHFFLjE3OTMyODA0OTkuMzI1MjhjM2YxNTQ1ZjRlZGUzZTZiY2YyODJmMWI2MmYiLCJxdWFsaXR5IjoiSEQifSx7InRpdGxlIjoi0J3QotCSIiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDhyLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY2L250dl9tc2svaW5kZXgubTN1OD90b2tlbj12Mi5GeG1sa2lWczI5ekZuVFMzQ0VMT0FENkpIVlFuVzdNQXFlX1BIUUhDQVVJLk55WDBYZy14MzNUa203b3FiSXVVQklOdmxTQ1U4WUVpMDdVcmVkRHctejQuMTc5MzI4MDQ5OS4xNjAxZTdhMTMyMzA3YzA3ZjllYTVmMzJjZWRjMmQ5YSIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQn9GP0YLRi9C5INC60LDQvdCw0LsiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwNXAubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjcvNXR2L2luZGV4Lm0zdTg/dG9rZW49djIuRHRCN1dnZl9oZTRDUDFJUEk1WWNQSnZaVFppOGl5b2ZrN2V5UThOTGFOTS5mTFJoZzNtamptbHlWRHloLTJ2MzJEVzlnLS1hczkwTHRaMUZOVFFrdnZNLjE3OTMyODA1MDAuZTNjYTY1OWVmOTBkMjJkMDg5ZTJkYzZlMmFhYzUxZDgiLCJxdWFsaXR5IjoiSEQifSx7InRpdGxlIjoi0KDQvtGB0YHQuNGPINCaIiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDZyLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY3L3J1c3NpYWsvaW5kZXgubTN1OD90b2tlbj12Mi5ZQlBPanZ3aUpHUkVYZWRoSnA4NjMyTFVFRE9SM1BoR2pNV2thci1PSGl3LkczMjB2QzVISFduZXphVmVla20tZVg2MllHV0dNNUVtSWFMZ3lMZTBjMHcuMTc5MzI4MDUwMC4xMjViNTZiYzc2YWM5ODJhNmQ5NWZkM2QwNWU5NGNiMiIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQoNC+0YHRgdC40Y8gMjQiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwMmQubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjYvcnVzc2lhMjQvaW5kZXgubTN1OD90b2tlbj12Mi5rMTVpRzVCbkVMV19WcERBTWVXZVlsTlo1alBZZDY2Vjl3Ui1GZlRUR2g0LjlSOFdnY09scElZakZ0YlItRWEwamdVYkp1UE9PbU5mcDVQMUZkekU0V2suMTc5MzI4MDUwMC44Yzc3ZGZhMjEwMWE2ZjYzYTY1N2Y1ZjU0NDdhZmI2YyIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQmtCw0YDRg9GB0LXQu9GMIiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDZkLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY3L2thcnVzZWxoZC9pbmRleC5tM3U4P3Rva2VuPXYyLkNwWDllQmtpR1B4N0ktNlUyYV9FWjhlcTlsbkQyS0N0U1VrMlF3OFc0a28uZ3g3NzZkQWg5Q01WZ1VxOGg0a1pJZ3l3M2xvVVB3WnpvelJVZlJOcEpYby4xNzkzMjgwNTAwLjJlOTc2YThmNGI3NzFlMWNjMDA1ZTZlMTViNjk2ODUxIiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCe0KLQoCIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAxci5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNS9vdHJfMC9pbmRleC5tM3U4P3Rva2VuPXYyLnBydU1ZckxBN21RQUxVdjZBa0UyM1AxbXJDSmFTc0FWY19kUDJENG8teWsuRUQwYVFmbkU3YWN3VFlSWjJsdkFDVS1ZSmNCR0gtYkRHLXZhR3pnMU03NC4xNzkzMjgwNTAxLmI1YmE5ZDRmYmVhMWVlNWQyYjVlNTJmYTliZGU2ZjVkIiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCi0JIg0KbQtdC90YLRgCIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAxci5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNi90dmMvaW5kZXgubTN1OD90b2tlbj12Mi5VODBXajk1QVZHYnRZVXUta29NN096dk1MTFUyaXpMRlNQSmlORmhONDdrLmlObVd5cWprazluR0E1QzQtdmY2by1qZ3FZX1RoVVdwWHJjc3VZMUQyemcuMTc5MzI4MDUwMS5mZGUyMmNiZjI1ZjBlNDBkM2Y1OTJhYWIxN2FiODcwMSIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQoNCV0J0g0KLQkiIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTA2ZC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNS9yZW4tdHYvaW5kZXgubTN1OD90b2tlbj12Mi5QN1FLTlBXOG5UU1o3aWVjQml2Z3p6Y0Q1c1pTV2dMRDAtR0h0NjFSMm9vLjV2alhXemgteTcwQ1hpbmllU1BadnZObWtnc3NocFJEc1AybUpacXNqeHcuMTc5MzI4MDUwMS5hZDZlZjcxNTJiNDJlMTYyOTE2MTc0M2VjMjQ5ZWFjNSIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQodCf0JDQoSIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAyZC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNi9zcGFzL2luZGV4Lm0zdTg/dG9rZW49djIuMldXRi1LZWthVzgxazlCdDJCN1cyeEZRNHpfV254RUcybGZzcUtsT0h2ay5KTi1ZTmt5MERLMkQySldtSVVrTjF1Z0pXa2hyQlJzWnJxV2lwYjY2QlhFLjE3OTMyODA1MDEuMGMwODY4MTdmOTM3YzNiYmQwNzhhNzQ5NGI2NGViYmEiLCJxdWFsaXR5IjoiU0QifSx7InRpdGxlIjoi0KHQotChIiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDJwLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY2L2N0Yy9pbmRleC5tM3U4P3Rva2VuPXYyLl92NTF4cDNSeHg3TkdpUjRzTmZQa0drWV90OU5MOEw0RXpjVklUQm8zS00uWFQxYjN2dkZSRy1DdEczdExHSEpDTWFQX0JOeERoOWtWaWRaWkNCd1RFVS4xNzkzMjgwNTAxLmI3ODYyZTc0YTA4ZTI2MDRhMjM4YzEzNTVjY2JkOTYxIiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCU0L7QvNCw0YjQvdC40LkiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwOHIubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjUvY3RjLWRvbS9pbmRleC5tM3U4P3Rva2VuPXYyLnFrU3RwajlaaTFoUkt6dnNDTnpzT3hEeFJKVzdsWDdRQnlOLTQ4dWpHZnMuM1RmSEg2NUVWd1VrbzRCTF9DM0xaZTk2ajNraXZoV2ZWdUQwUDlmU3VZWS4xNzkzMjgwNTAyLmViYjUzMDQ1YjAxMTdhMmVmYTIwNjNmYzg0Y2E2OTg5IiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCi0JItMyIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAyci5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNy90djMvaW5kZXgubTN1OD90b2tlbj12Mi5zUFF6aV8tSHBnai1KRDJMQnRmWlBPdUNuUVZSUGxJc2JOSjRBcW5HWVZFLkVxLTBjbmtpWlp4SEljRlVvZjRBeEJFQ1hteGFyb0gybk5vcFZiZTBrdTguMTc5MzI4MDUwMi4wOWIzNjAzYjEyMDdlYWZiYzk3NmZiZjZhYzA5ZmZmNiIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQn9GP0YLQvdC40YbQsCIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAxcC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNy9mcmlkYXkvaW5kZXgubTN1OD90b2tlbj12Mi5TRnBOTFY5YjFaQnlsdTl0MEI2ZWdqc3N6Qk9fVFgyc3dQQzFRQUFTT3gwLlBVLTlDSV82d0tHV2NZUnpzRElVOWRkalFRSzZWOXdTc25KQzFzUUVCdk0uMTc5MzI4MDUwMi5hMTFlMDZhOWU1NTU4NDczNTJlYzM5N2FjNTYzY2JkMyIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQl9Cy0LXQt9C00LAiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwOGQubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjcvenZlemRhMC9pbmRleC5tM3U4P3Rva2VuPXYyLldCcGdJWmlrUTNaRmtlc2tfSGhMelIxVktIVlcyU2pzc0MtUk1MQU5IOU0uTE1CRnE2QlYxYUx1dnIzVVp2YVo0RHFnaVZXc1NSbUFTSEp2R2lWLVVjYy4xNzkzMjgwNTAyLjg4NWMwY2RiODNjYTEzMDAyNDM5NDBjMWM3YTg5ZmM0IiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCc0JjQoCIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAycC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNy9taXIvaW5kZXgubTN1OD90b2tlbj12Mi4tSWdTZWZCbGdhNzFxTmpjVGdNWWs3Smd1QUZXZ2dsXzVrdUJUWUtNREY0LnlveE5aN1lGaDJGTjlKcldISDU2X1FNbFVvVlNFdzlndklHcVpxVXFUdWMuMTc5MzI4MDUwMy5mMjMzODAxNDdkYWY5ZGFiZDNlZTIyYTJjMTc3YzYxZCIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQotCd0KIiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwN2QubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjcvdG50L2luZGV4Lm0zdTg/dG9rZW49djIuRVRUTTl1ekZuZU94TGVhSVN4eGxPWEtSSGpIRUJGLUVmZHhZcElidjl5OC5KVkZNZWJiTThfZlFWN19mWkFHWkRtQlhYVUwzUVNGWmZ4aFhoUXlxaWdvLjE3OTMyODA1MDMuNTc1ZjdjYmExMDg5OTczZTMzOWI3NjUxMGNmOWI3YjgiLCJxdWFsaXR5IjoiSEQifSx7InRpdGxlIjoi0JzRg9C3LdCi0JIiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwMnAubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjIvbXV6dHYvaW5kZXgubTN1OD90b2tlbj12Mi5BbHlrRFR3a09BbGtEVUpRQXVHeWRXclpSUmNxM2JaUUczSW1FdTdJUzFZLlRQSGhnM2FremJVMF9IWk5fMXQ2NmRPcC1FN0FUaktUNWMwSFBCTm1VMlEuMTc5MzI4MDUwMy5iNGZjNDFjYjg1MTBiZWY5YTlmZjM0NjYzZDVjNDAxZiIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQp9C1Iiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDhyLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY2L2N0Yy1jaGUvaW5kZXgubTN1OD90b2tlbj12Mi52ekZKczZmSVN1RXBSblBDaHBfYnk5RHpYSktTXy1qR1JJRi1hNm1UR3pzLkdFM1FKRjNWdEc5Vk0tTHRnUnpBNXJBOVZzc0FtYk1fQ3NJemhrUUszZkkuMTc5MzI4MDUwMy5jMTYxZDQ1MmI5ODM0ODBhYjgyMTdmOWM4YmEwMDEwZCIsInF1YWxpdHkiOiJTRCJ9LHsidGl0bGUiOiLQmNC30LLQtdGB0YLQuNGPIiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDJwLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY3L2l6dmVzdGlhL2luZGV4Lm0zdTg/dG9rZW49djIuRkkzSVlmMHhhOGMzRFVvWG9mN0hvRUNhel85MlFrUXJja083Ulp5ZEdRYy44R1Y3ejJzaVZyYXlMRC1LNlhGc3NFMk15eGhES21XSlVBTWp5eURnb0dBLjE3OTMyODA1MDMuMTQ4Nzg5NzMxNTQ4MmQxOWZhYThjMWI2NzZiMWYwZWMiLCJxdWFsaXR5IjoiSEQifSx7InRpdGxlIjoi0KHQotChIExvdmUiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwMnIubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjYvY3RjLWxvdmUvaW5kZXgubTN1OD90b2tlbj12Mi5oUHUxb3Jmd19WMEh4NkpxQ2g4NXFpczVINUNBR29fUHktTjJLLVJKMXFBLkxtMFN3WnZuOXdhTEV6aXhnckFqRUlaWl9wNWRkQ0dFemhMWTQ1ZlRGVGsuMTc5MzI4MDUwMy5iMTgxODViYjcyOTcwZTNiZjM2MDMzZTYyNTFiNDJiZCIsInF1YWxpdHkiOiJTRCJ9LHsidGl0bGUiOiLQriIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAxcC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNS95dS9pbmRleC5tM3U4P3Rva2VuPXYyLnFJT2hBbE8yM2ZTZFhiNXpDQS05NHR5LTRQMmx4Vmc2eGhTZVp5TGNXcHMuWm8zYl9wd2hFNXdrZmlMWUY4bklxT3hKN2J1Sk85ZFgwT3NnVnQ5TDZ3SS4xNzkzMjgwNTAzLmFjZmJiZDY5MGMzMjNlMTZkM2E3YjA0YzY0MTJhOWVmIiwicXVhbGl0eSI6IlNEIn0seyJ0aXRsZSI6ItCh0L7Qu9C90YbQtSIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAyci5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNi9zb2xudHNlL2luZGV4Lm0zdTg/dG9rZW49djIuZUdsRE1UYkpGSHVhNmJscUdSVmpVQWJueVBuY0p4eV9IUVV3SFdYZURyay5vUTVKRGEtakllY0wwUnNyejhBc0J1czFzd2RpZTNCSlFtbUFHdlVLVnI0LjE3OTMyODA1MDMuZGM4Y2U4YTM1Yjc0ZWEyODg3NDM1ZGZhN2QzNjM3OTAiLCJxdWFsaXR5IjoiU0QifSx7InRpdGxlIjoi0KHRg9Cx0LHQvtGC0LAiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwMnIubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjcvc3ViYm90YS9pbmRleC5tM3U4P3Rva2VuPXYyLndGVTdmV2NnU1ZZUlY1enVrcTNQd3VScFFkbEkwb0pBMDZXRVRWRmtoVzguTC1abUYyTHlQNEdXXy1pbE9HZGhuVzBYbExSVDF6R1JQMldsTWNIZC1zYy4xNzkzMjgwNTAzLjA2MWZlNWQwODg0NmUyYjk1ZDZhNDgxNTkxZTdmNDc5IiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCi0LXQu9C10LrQsNC90LDQuyA3OCIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTA4ZC5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmNS9jaGFubmVsNzgvaW5kZXgubTN1OD90b2tlbj12Mi4ydERENVZIVktVTy1uZTFzVFVId21nUWRNeDlvcU0wTEUzWDlMUE5ULXdJLjZNakMwQkFxTmwtZ21QZ1VoblVTNEhSZ1pEb2Nna1FMY2dLbXdaTVc4NTQuMTc5MzI4MDUwMy4yYzEzNjc5Y2RmNTE5YmFkYzU5NWMzOGMxM2QzYTM4NiIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQmtC40L3QviDQotCSIiwic3RyZWFtIjoiaHR0cHM6Ly9lZGdlMDZyLm1lZGlhdml0cmluYS5ydS9obHMtbGl2ZWY1L2tpbm90di9pbmRleC5tM3U4P3Rva2VuPXYyLmFRVXdnY2NFX0NlNmtLZ3NNZ1JxSUVROUNJSXJXMUJnbElSWlFfcDlleVEuUXkxOUhwZk9GMVpHUW9PVEZtdFhBd3J3YkRXLXhzcWc4M0otT043NXNMay4xNzkzMjgwNTAzLmMyMTI5YmU0NWI4ZTk2YjkyMDE3YzUyMzY1ZWZiZTg5IiwicXVhbGl0eSI6IkhEIn0seyJ0aXRsZSI6ItCa0LjQvdC+0KHQtdC30L7QvSIsInN0cmVhbSI6Imh0dHBzOi8vZWRnZTAyci5tZWRpYXZpdHJpbmEucnUvaGxzLWxpdmVmMS9raW5vc2V6b24vaW5kZXgubTN1OD90b2tlbj12Mi41YjYyQkFQb01PaVJmbzRwVjdGS3NFaHM1M2RXSGFmMTg1Y05malFyeHVFLnNxSDMwb0pBdlF6RmJSOW9xQ2dNdzJpRGVhdkpkWUptR1RBa3BHcHVVSjAuMTc5MzI4MDUwNC5jYzQ1NWIzMmMzZmI5NmUyYmJlZmQ5ZjhiODU2NmU4OCIsInF1YWxpdHkiOiJIRCJ9LHsidGl0bGUiOiLQptCi0JIiLCJzdHJlYW0iOiJodHRwczovL2VkZ2UwMWQubWVkaWF2aXRyaW5hLnJ1L2hscy1saXZlZjIvY3R2L2luZGV4Lm0zdTg/dG9rZW49djIuZlRKWjI3TnVyQk1qbnVEN3pXWE9zcU10Y0Q2aW90MVN3MDRtaTRQVGV6RS5wQmRObVNMNE1xUno1YnE4blJUYUhWWTVBWjh0SmVpSXM0WVZXV3JrYmk4LjE3OTMyODA1MDQuMDMyN2U1YWRjMTJkNzRiMDJhYjk4ZjJmMGM4NWQzYjYiLCJxdWFsaXR5IjoiU0QifV0=";
 </script>
-<!-- Video.js JS -->
 <script src="https://vjs.zencdn.net/8.23.8/video.min.js"></script>
-<!-- Плагин выбора качества (новый) -->
 <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.min.js"></script>
 <script src="static/app.js"></script>
 </body>

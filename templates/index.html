@@ -7,58 +7,28 @@
 
 <!-- Video.js CSS -->
 <link href="https://vjs.zencdn.net/8.23.8/video-js.css" rel="stylesheet" />
-<!-- Плагин для выбора качества (новый) -->
+<!-- Плагин для выбора качества -->
 <link href="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.css" rel="stylesheet">
 
 <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
 
-  <!-- Шапка -->
-  <header>
-    <div class="logo">
-      <div class="logo-icon">TV</div>
-      Онлайн
-    </div>
-    <div class="live-indicator">
-      <div class="live-dot"></div>
-      <span id="nowPlaying">В эфире</span>
-    </div>
-  </header>
-
-  <!-- Основная рабочая область -->
-  <div class="main-container">
+  <!-- Основной контейнер -->
+  <div class="layout">
     
-    <!-- Левая часть: Сайдбар с каналами -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2>Все каналы</h2>
-        <span class="badge" id="channelCount">0</span>
-      </div>
-
-      <div class="search-wrap">
-        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.35-4.35"/>
-        </svg>
-        <input type="text" id="searchInput" placeholder="Поиск канала...">
-      </div>
-
-      <div class="channel-list" id="channelList">
-        <!-- Список генерируется через JS -->
-      </div>
-    </aside>
-
-    <!-- Правая часть: Плеер -->
-    <main class="player-section">
-      <div class="video-wrapper">
-        <!-- Заглушка, показывается до выбора канала -->
+    <!-- Верхняя часть: Плеер и Инфо-панель -->
+    <div class="top-row">
+      
+      <!-- Плеер -->
+      <div class="player-wrapper">
+        <!-- Заглушка -->
         <div class="video-placeholder" id="placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="4" width="20" height="16" rx="2"/>
             <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
           </svg>
-          <p>Выберите канал слева, чтобы начать просмотр</p>
+          <p>Выберите канал ниже</p>
         </div>
         
         <!-- Контейнер для Video.js -->
@@ -66,16 +36,42 @@
           <video id="video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline></video>
         </div>
       </div>
-    </main>
+
+      <!-- Панель информации справа (как в референсе) -->
+      <div class="info-panel">
+        <div class="channel-header">
+          <div class="big-logo" id="infoLogo">1</div>
+          <div class="channel-title" id="infoTitle">Первый Канал</div>
+        </div>
+        <div class="epg-list">
+          <!-- Здесь в будущем может быть сетка передач. Пока просто заполним заглушками для красоты -->
+          <div class="epg-item">
+            <span class="epg-time">Сейчас</span>
+            <span class="epg-name" id="nowPlaying">Выберите канал</span>
+          </div>
+          <div class="epg-item">
+            <span class="epg-time">Далее</span>
+            <span class="epg-name">Программа передач</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Нижняя часть: Карусель каналов -->
+    <div class="carousel-wrapper">
+      <button class="scroll-btn" id="scrollLeftBtn" style="display: none;">‹</button>
+      <div class="channel-carousel" id="channelList">
+        <!-- Список генерируется через JS -->
+      </div>
+      <button class="scroll-btn" id="scrollRightBtn">›</button>
+    </div>
 
   </div>
 
 <script>
   const ENCODED_CHANNELS = $CHANNELS;
 </script>
-<!-- Video.js JS -->
 <script src="https://vjs.zencdn.net/8.23.8/video.min.js"></script>
-<!-- Плагин выбора качества (новый) -->
 <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.min.js"></script>
 <script src="static/app.js"></script>
 </body>
