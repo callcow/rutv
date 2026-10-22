@@ -2,7 +2,6 @@ name: Build TV page
 
 on:
   schedule:
-    # 7:00 UTC = 10:00 МСК. */5 = 5,10,15,20,25,30 число месяца.
     - cron: '0 7 */5 * *'
   workflow_dispatch:
 
@@ -30,7 +29,23 @@ jobs:
       - name: Install deps
         run: pip install requests
 
-      - name: Build
+      - name: Build EPG
+        id: epg
+        continue-on-error: true
+        run: python build_epg.py
+
+      - name: Warn if EPG failed
+        if: steps.epg.outcome == 'failure'
+        run: echo "::warning::EPG не обновился, сайт деплоится со старым epg_data.json"
+
+      - name: Ensure epg_data.json exists
+        run: |
+          if [ ! -s epg_data.json ]; then
+            echo "⚠ EPG не собран — создаю пустой, чтобы build.py не упал"
+            echo '{}' > epg_data.json
+          fi
+
+      - name: Build HTML
         run: python build.py
 
       - name: Upload Pages artifact

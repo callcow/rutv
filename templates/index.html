@@ -14,15 +14,9 @@
 </head>
 <body>
 
-  <!-- Основной контейнер -->
   <div class="layout">
-    
-    <!-- Верхняя часть: Плеер и Инфо-панель -->
     <div class="top-row">
-      
-      <!-- Плеер -->
       <div class="player-wrapper">
-        <!-- Заглушка -->
         <div class="video-placeholder" id="placeholder">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="2" y="4" width="20" height="16" rx="2"/>
@@ -31,45 +25,34 @@
           <p>Выберите канал ниже</p>
         </div>
         
-        <!-- Контейнер для Video.js -->
         <div id="video-container" style="width: 100%; height: 100%; display: none;">
           <video id="video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline></video>
         </div>
       </div>
 
-      <!-- Панель информации справа (как в референсе) -->
       <div class="info-panel">
         <div class="channel-header">
           <div class="big-logo" id="infoLogo">1</div>
           <div class="channel-title" id="infoTitle">Первый Канал</div>
         </div>
-        <div class="epg-list">
-          <!-- Здесь в будущем может быть сетка передач. Пока просто заполним заглушками для красоты -->
-          <div class="epg-item">
-            <span class="epg-time">Сейчас</span>
-            <span class="epg-name" id="nowPlaying">Выберите канал</span>
-          </div>
-          <div class="epg-item">
-            <span class="epg-time">Далее</span>
-            <span class="epg-name">Программа передач</span>
-          </div>
+        <div class="epg-list" id="epgList">
+          <!-- Программа передач генерируется через JS -->
         </div>
       </div>
     </div>
 
-    <!-- Нижняя часть: Карусель каналов -->
     <div class="carousel-wrapper">
       <button class="scroll-btn" id="scrollLeftBtn" style="display: none;">‹</button>
       <div class="channel-carousel" id="channelList">
-        <!-- Список генерируется через JS -->
+        <!-- Список каналов -->
       </div>
       <button class="scroll-btn" id="scrollRightBtn">›</button>
     </div>
-
   </div>
 
 <script>
   const ENCODED_CHANNELS = $CHANNELS;
+  const EPG_DATA = $EPG_DATA;
 </script>
 <script src="https://vjs.zencdn.net/8.23.8/video.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.min.js"></script>

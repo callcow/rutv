@@ -1,6 +1,6 @@
 import json
 import sys
-import base64  # <--- добавляем библиотеку для шифрования
+import base64
 from pathlib import Path
 import requests
 
@@ -25,10 +25,9 @@ def fetch_channels() -> list[dict]:
     for item in data:
         title = (item.get("title") or "").strip()
         stream = (item.get("stream") or "").strip()
-        quality = (item.get("quality") or "").strip() # <-- Забираем качество
+        quality = (item.get("quality") or "").strip()
         if not title or not stream:
             continue
-        # Сохраняем качество в словарь
         cleaned.append({"title": title, "stream": stream, "quality": quality})
 
     if not cleaned:
@@ -50,12 +49,22 @@ def main() -> int:
         # 1. Превращаем список каналов в компактную JSON-строку
         channels_json = json.dumps(channels, ensure_ascii=False, separators=(',', ':'))
         
-        # 2. Шифруем эту строку в Base64
+        # 2. Читаем EPG, если файл существует
+        epg_json = "{}"
+        epg_path = Path("epg_data.json")
+        if epg_path.exists():
+            epg_json = epg_path.read_text(encoding="utf-8")
+            print(f"✓ Загружен EPG ({len(epg_json):,} байт)")
+        else:
+            print("⚠ Файл epg_data.json не найден. Программа передач будет пустой.")
+        
+        # 3. Шифруем каналы в Base64
         encoded_bytes = base64.b64encode(channels_json.encode('utf-8'))
         encoded_str = encoded_bytes.decode('utf-8')
         
-        # 3. Подставляем зашифрованную строку в шаблон
-        html = html.replace("$CHANNELS", f'"{encoded_str}"') # Добавляем кавычки, так как это теперь просто строка
+        # 4. Подставляем зашифрованную строку и EPG в шаблон
+        html = html.replace("$CHANNELS", f'"{encoded_str}"')
+        html = html.replace("$EPG_DATA", epg_json) 
 
         OUTPUT_FILE.write_text(html, encoding="utf-8")
         print(f"✓ {OUTPUT_FILE} ({len(html):,} байт)")

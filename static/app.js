@@ -16,62 +16,195 @@ function decodeBase64Json(encodedStr) {
 
 const CHANNELS = typeof ENCODED_CHANNELS !== 'undefined' ? decodeBase64Json(ENCODED_CHANNELS) : [];
 
+const LOGO_FILES = {
+  "Первый канал": "1tv.png",
+  "Россия 1": "russia1.png",
+  "Матч ТВ": "matchtv.png",
+  "НТВ": "ntv.png",
+  "Пятый канал": "5tv.png",
+  "Россия К": "russiak.png",
+  "Россия 24": "russia24.png",
+  "Карусель": "karusel.png",
+  "ОТР": "otr.png",
+  "ТВ Центр": "tvc.png",
+  "РЕН ТВ": "rentv.png",
+  "СПАС": "spas.png",
+  "СТС": "sts.png",
+  "Домашний": "domashniy.png",
+  "ТВ-3": "tv3.png",
+  "Пятница": "friday.png",
+  "Звезда": "zvezda.png",
+  "Мир": "mir.png",
+  "ТНТ": "tnt.png",
+  "Муз-ТВ": "muztv.png",
+  "Суббота": "subbota.png",
+  "Че": "che.png",
+  "ЦТВ": "ctv.png",
+  "Известия": "iz.png",
+  "Кино ТВ": "kinotv.png",
+  "Ю": "u.png",
+  "Телеканал 78": "78.png",
+  "КиноСезон": "kinosezon.png",
+  "Солнце": "solnce.png",
+  "СТС Love": "stslove.png"
+};
+
+function getLogoFile(title) {
+  const titleLower = title.trim().toLowerCase();
+  const key = Object.keys(LOGO_FILES).find(k => k.toLowerCase() === titleLower);
+  return key ? LOGO_FILES[key] : null;
+}
+
 const channelListEl = document.getElementById('channelList');
-const nowPlayingEl = document.getElementById('nowPlaying');
 const infoTitle = document.getElementById('infoTitle');
 const infoLogo = document.getElementById('infoLogo');
+const epgListEl = document.getElementById('epgList');
 const placeholder = document.getElementById('placeholder');
 const videoContainer = document.getElementById('video-container');
 const scrollRightBtn = document.getElementById('scrollRightBtn');
+const scrollLeftBtn = document.getElementById('scrollLeftBtn');
 
 let activeIndex = -1;
 let player = null;
 
-// Генерируем красивое короткое имя для логотипа
-function getLogoText(name) {
-    const cleanName = name.replace(/[^\w\sа-яА-Я]/gi, '');
-    if (cleanName.includes('Первый')) return '1';
-    if (cleanName.includes('Россия 1')) return 'Р1';
-    if (cleanName.includes('Россия 24')) return '24';
-    if (cleanName.includes('Матч')) return 'М';
-    if (cleanName.includes('НТВ')) return 'НТВ';
-    if (cleanName.includes('Пятый')) return '5';
-    return cleanName.substring(0, 2).toUpperCase(); // Первые 2 буквы
+// Сколько передач показывать (включая текущую)
+const EPG_ITEMS_LIMIT = 11;
+
+function initials(name) {
+  return name.split(/[\s\-_]+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
 }
 
 function renderChannels() {
   channelListEl.innerHTML = '';
-  
+
   CHANNELS.forEach((ch, i) => {
     const item = document.createElement('div');
     item.className = 'channel-item' + (i === activeIndex ? ' active' : '');
-    
-    const qualityBadge = ch.quality === 'HD' ? '<span class="quality-badge">HD</span>' : '';
-    const logoText = getLogoText(ch.title);
+
+    const hdBadge = ch.quality === 'HD' ? '<span class="quality-badge hd">HD</span>' : '';
+
+    const logoFile = getLogoFile(ch.title);
+    const logoHtml = logoFile
+      ? `<img src="static/logos/${logoFile}" alt="${ch.title}" loading="lazy">`
+      : initials(ch.title);
 
     item.innerHTML = `
-      ${qualityBadge}
-      <div class="channel-logo">${logoText}</div>
+      <div class="channel-card-inner">
+        <div class="channel-logo">${logoHtml}</div>
+      </div>
+      <div class="channel-name-wrapper">
+        <div class="channel-name" title="${ch.title}">${ch.title}</div>
+        ${hdBadge}
+      </div>
     `;
+
     item.addEventListener('click', () => selectChannel(i));
     channelListEl.appendChild(item);
   });
+}
+
+function parseEPGDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Берёт до `limit` передач, начиная с текущей.
+function takeUpcoming(items, limit) {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  const now = new Date();
+
+  let anchorIdx = -1;
+  for (let i = 0; i < items.length; i++) {
+    const s = parseEPGDate(items[i].start_iso);
+    const e = parseEPGDate(items[i].stop_iso);
+    if (s && e && now >= s && now < e) {
+      anchorIdx = i;
+      break;
+    }
+  }
+
+  if (anchorIdx === -1) {
+    for (let i = 0; i < items.length; i++) {
+      const e = parseEPGDate(items[i].stop_iso);
+      if (e && e > now) { anchorIdx = i; break; }
+    }
+  }
+
+  if (anchorIdx === -1) {
+    anchorIdx = items.length - 1;
+  }
+
+  return items.slice(anchorIdx, anchorIdx + limit);
+}
+
+function updateCurrentEPGHighlight() {
+  const items = document.querySelectorAll('.epg-item');
+  const now = new Date();
+
+  items.forEach(item => {
+    const startStr = item.getAttribute('data-start');
+    const stopStr = item.getAttribute('data-stop');
+    if (!startStr || !stopStr) return;
+
+    const start = new Date(startStr);
+    const stop = new Date(stopStr);
+
+    if (now >= start && now < stop) {
+      item.classList.add('now-playing');
+    } else {
+      item.classList.remove('now-playing');
+    }
+  });
+}
+
+setInterval(updateCurrentEPGHighlight, 60000);
+
+function renderEPG(title) {
+  if (!epgListEl) return;
+
+  let channelEpg = EPG_DATA[title];
+  if (!channelEpg) {
+    const key = Object.keys(EPG_DATA).find(k => k.toLowerCase() === title.toLowerCase());
+    if (key) channelEpg = EPG_DATA[key];
+  }
+
+  const visible = takeUpcoming(channelEpg, EPG_ITEMS_LIMIT);
+
+  if (visible.length > 0) {
+    epgListEl.innerHTML = visible.map(item => `
+      <div class="epg-item" data-start="${item.start_iso}" data-stop="${item.stop_iso}">
+        <span class="epg-time">${item.start}</span>
+        <span class="epg-name" title="${item.title}">${item.title}</span>
+      </div>
+    `).join('');
+
+    updateCurrentEPGHighlight();
+  } else {
+    epgListEl.innerHTML = '<div style="color: var(--text-muted); font-size: 14px; text-align:center; margin-top:20px;">Нет данных о программе</div>';
+  }
 }
 
 function selectChannel(i) {
   if (i < 0 || i >= CHANNELS.length) return;
   activeIndex = i;
   const ch = CHANNELS[i];
-  
-  // Обновляем правую панель
+
   infoTitle.textContent = ch.title;
-  infoLogo.textContent = getLogoText(ch.title);
-  nowPlayingEl.textContent = ch.title;
-  
-  // Прячем заглушку, показываем плеер
+
+  const logoFile = getLogoFile(ch.title);
+  if (logoFile) {
+    infoLogo.innerHTML = `<img src="static/logos/${logoFile}" alt="${ch.title}">`;
+  } else {
+    infoLogo.textContent = initials(ch.title);
+  }
+
+  renderEPG(ch.title);
+
   placeholder.style.display = 'none';
   videoContainer.style.display = 'block';
-  
+
   renderChannels();
 
   const activeItem = channelListEl.children[i];
@@ -79,7 +212,6 @@ function selectChannel(i) {
     activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }
 
-  // Инициализируем Video.js
   if (!player) {
     player = videojs('video', {
       controls: true,
@@ -95,44 +227,38 @@ function selectChannel(i) {
     }
   }
 
-  // Запускаем поток
   player.src({ src: ch.stream, type: 'application/x-mpegURL' });
   player.play().catch(() => {});
 }
 
-const scrollLeftBtn = document.getElementById('scrollLeftBtn');
+scrollLeftBtn.addEventListener('click', () => {
+  channelListEl.scrollBy({ left: -300, behavior: 'smooth' });
+});
 
-// Логика прокрутки
-if (scrollLeftBtn) {
-  scrollLeftBtn.addEventListener('click', () => {
-    channelListEl.scrollBy({ left: -400, behavior: 'smooth' });
-  });
-}
+scrollRightBtn.addEventListener('click', () => {
+  channelListEl.scrollBy({ left: 300, behavior: 'smooth' });
+});
 
-if (scrollRightBtn) {
-  scrollRightBtn.addEventListener('click', () => {
-    channelListEl.scrollBy({ left: 400, behavior: 'smooth' });
-  });
-}
-
-// Показываем/скрываем левую кнопку в зависимости от прокрутки
 channelListEl.addEventListener('scroll', () => {
-  if (scrollLeftBtn) {
-    if (channelListEl.scrollLeft > 0) {
-      scrollLeftBtn.style.display = 'flex'; // Показываем
-    } else {
-      scrollLeftBtn.style.display = 'none'; // Скрываем
-    }
+  if (channelListEl.scrollLeft > 0) {
+    scrollLeftBtn.style.display = 'flex';
+  } else {
+    scrollLeftBtn.style.display = 'none';
   }
 });
 
-// Клавиатура
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') { e.preventDefault(); selectChannel(activeIndex + 1); }
   if (e.key === 'ArrowLeft')  { e.preventDefault(); selectChannel(activeIndex - 1); }
 });
 
-// Инициализация
+// Обновление списка EPG при возврате на вкладку (чтобы «съехало» к текущей)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && activeIndex >= 0 && CHANNELS[activeIndex]) {
+    renderEPG(CHANNELS[activeIndex].title);
+  }
+});
+
 renderChannels();
 if (CHANNELS.length > 0) {
   selectChannel(0);

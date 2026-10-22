@@ -99,12 +99,22 @@ body {
 }
 
 .big-logo {
-  width: 64px; height: 64px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  width: 64px; 
+  height: 64px;
+  background: var(--bg-item);
   border-radius: var(--radius-md);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 28px; font-weight: 900; color: #fff;
-  font-style: italic;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden; 
+}
+
+.big-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; 
+  display: block;
 }
 
 .channel-title {
@@ -144,8 +154,9 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 90px;
+  height: 140px; /* Увеличили высоту с запасом для анимации и текста */
   flex-shrink: 0;
+  padding-bottom: 8px;
 }
 
 .channel-carousel {
@@ -156,48 +167,114 @@ body {
   scroll-behavior: smooth;
   height: 100%;
   scrollbar-width: none;
+  padding-top: 6px; /* Отступ сверху, чтобы карточка не обрезалась при наведении */
+  padding-bottom: 6px; /* Отступ снизу для тени */
 }
 .channel-carousel::-webkit-scrollbar { display: none; }
 
 /* Карточка канала */
 .channel-item {
   flex: 0 0 auto;
-  width: 140px;
+  width: 150px; /* Чуть шире для удобства */
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  transition: transform 0.2s;
+  gap: 8px;
+}
+
+.channel-item:hover { transform: translateY(-3px); }
+
+/* Внутренний контейнер для логотипа */
+.channel-card-inner {
+  width: 100%;
+  aspect-ratio: 16 / 9; /* Пропорции телевизора */
   background: var(--bg-item);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
+  overflow: hidden;
   border: 2px solid transparent;
-  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
 }
 
-.channel-item:hover { background: var(--bg-item-hover); transform: translateY(-2px); }
-.channel-item.active {
+.channel-item:hover .channel-card-inner { 
+  background: var(--bg-item-hover); 
+}
+
+.channel-item.active .channel-card-inner {
   border-color: var(--accent);
   background: rgba(59, 130, 246, 0.15);
 }
 
+/* Логотип */
 .channel-logo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 20px;
   font-weight: 900;
   color: rgba(255,255,255,0.7);
   font-style: italic;
 }
 
+.channel-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .channel-item.active .channel-logo { color: #fff; }
 
-.quality-badge {
-  position: absolute;
-  top: 8px; right: 8px;
-  font-size: 9px; font-weight: 800;
-  padding: 2px 5px; border-radius: 4px;
+/* Обертка для названия и HD-бейджа */
+.channel-name-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0 4px;
+}
+
+/* Название */
+.channel-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-item.active .channel-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Плашка HD */
+.quality-badge.hd {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 4px;
   background: rgba(59, 130, 246, 0.2);
   color: var(--accent);
   border: 1px solid rgba(59, 130, 246, 0.5);
+  flex-shrink: 0;
+}
+
+/* Скрываем старые стили */
+.channel-info, .channel-meta {
+  display: none;
 }
 
 .scroll-btn {
@@ -211,8 +288,6 @@ body {
 }
 .scroll-btn:hover { background: var(--accent); border-color: var(--accent); }
 
-.channel-meta, .channel-info { display: none; }
-
 /* =========================================
    АДАПТИВНАЯ ВЕРСТКА ДЛЯ МОБИЛЬНЫХ
    ========================================= */
@@ -220,15 +295,13 @@ body {
   .layout {
     padding: 10px;
     gap: 10px;
-    overflow-y: auto; /* Разрешаем скролл всей страницы на телефоне */
+    overflow-y: auto;
   }
 
-  /* Отключаем flex-строку, чтобы элементы шли друг за другом */
   .top-row {
     display: contents; 
   }
 
-  /* 1. Плеер — на самом верху */
   .player-wrapper {
     order: 1;
     width: 100%;
@@ -237,15 +310,14 @@ body {
     margin-bottom: 10px;
   }
 
-  /* 2. Карусель — ровно посередине */
   .carousel-wrapper {
     order: 2;
     width: 100%;
-    height: 70px; /* Делаем чуть компактнее */
+    height: 115px; /* Увеличили для мобилок */
     margin-bottom: 10px;
+    gap: 8px;
   }
 
-  /* 3. Инфо-панель (программа) — уезжает вниз */
   .info-panel {
     order: 3;
     width: 100%;
@@ -254,21 +326,36 @@ body {
     padding: 16px;
   }
 
-  /* Скрываем стрелки на телефоне полностью */
   .scroll-btn {
-    display: none !important;
+    display: flex !important; 
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
   }
 
   .channel-item {
-    width: 90px; /* Карточки чуть меньше, чтобы влезало больше */
+    width: 110px;
   }
   
   .channel-logo {
     font-size: 14px;
   }
+}
 
-  /* Убираем прокрутку внутри карусели на телефоне, чтобы свайп работал нативно */
-  .channel-carousel {
-    padding-bottom: 0;
-  }
+/* Подсветка текущей передачи в EPG */
+.epg-item {
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.3s;
+}
+
+.epg-item.now-playing {
+  background: rgba(59, 130, 246, 0.15); /* Легкий синий фон */
+  border-left: 3px solid var(--accent); /* Синяя полоска слева */
+}
+
+.epg-item.now-playing .epg-time,
+.epg-item.now-playing .epg-name {
+  color: var(--text-main); /* Делаем текст белым и жирным для выделения */
+  font-weight: 600;
 }
