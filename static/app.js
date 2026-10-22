@@ -64,10 +64,14 @@ const videoContainer = document.getElementById('video-container');
 const scrollRightBtn = document.getElementById('scrollRightBtn');
 const scrollLeftBtn = document.getElementById('scrollLeftBtn');
 
+// Элементы плашки "Сейчас идёт"
+const nowPlayingBanner = document.getElementById('nowPlayingBanner');
+const nowPlayingText = document.getElementById('nowPlayingText');
+
 let activeIndex = -1;
 let player = null;
 
-// Сколько передач показывать (включая текущую)
+// Сколько передач показывать в списке (включая текущую)
 const EPG_ITEMS_LIMIT = 11;
 
 function initials(name) {
@@ -151,10 +155,42 @@ function updateCurrentEPGHighlight() {
     const start = new Date(startStr);
     const stop = new Date(stopStr);
 
+    const titleRow = item.querySelector('.epg-info-row');
+    const progressBar = item.querySelector('.progress-bar');
+    const progressContainer = item.querySelector('.progress-container');
+    
     if (now >= start && now < stop) {
       item.classList.add('now-playing');
+      
+      if (titleRow && !titleRow.querySelector('.live-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'live-badge';
+        badge.textContent = 'В эфире';
+        titleRow.appendChild(badge);
+      }
+
+      if (progressBar && progressContainer) {
+        progressContainer.style.display = 'block'; 
+        
+        const total = stop - start;
+        const passed = now - start;
+        let percent = (passed / total) * 100;
+        if (percent < 0) percent = 0;
+        if (percent > 100) percent = 100;
+        
+        progressBar.style.width = `${percent}%`;
+      }
     } else {
       item.classList.remove('now-playing');
+      
+      if (titleRow) {
+        const badge = titleRow.querySelector('.live-badge');
+        if (badge) badge.remove();
+      }
+
+      if (progressContainer) {
+        progressContainer.style.display = 'none';
+      }
     }
   });
 }
@@ -176,7 +212,14 @@ function renderEPG(title) {
     epgListEl.innerHTML = visible.map(item => `
       <div class="epg-item" data-start="${item.start_iso}" data-stop="${item.stop_iso}">
         <span class="epg-time">${item.start}</span>
-        <span class="epg-name" title="${item.title}">${item.title}</span>
+        <span class="epg-name">
+          <div class="epg-info-row">
+            <span class="epg-title-text">${item.title}</span>
+          </div>
+          <div class="progress-container">
+            <div class="progress-bar"></div>
+          </div>
+        </span>
       </div>
     `).join('');
 
@@ -184,6 +227,56 @@ function renderEPG(title) {
   } else {
     epgListEl.innerHTML = '<div style="color: var(--text-muted); font-size: 14px; text-align:center; margin-top:20px;">Нет данных о программе</div>';
   }
+}
+
+// Обновление плашки "Сейчас идёт" (ОБЪЕДИНЕНО В ОДИН ТЕГ)
+function updateNowPlayingBanner(channelTitle) {
+  if (!nowPlayingText || !nowPlayingBanner) return;
+  
+  let channelEpg = EPG_DATA[channelTitle];
+  if (!channelEpg) {
+    const key = Object.keys(EPG_DATA).find(k => k.toLowerCase() === channelTitle.toLowerCase());
+    if (key) channelEpg = EPG_DATA[key];
+  }
+
+  if (!channelEpg || channelEpg.length === 0) {
+    nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> Нет данных`;
+    nowPlayingBanner.style.display = 'block';
+    return;
+  }
+
+  const now = new Date();
+  let currentProg = null;
+
+  for (let i = 0; i < channelEpg.length; i++) {
+    const item = channelEpg[i];
+    const start = parseEPGDate(item.start_iso);
+    const stop = parseEPGDate(item.stop_iso);
+    
+    if (!start || !stop) continue;
+
+    if (now >= start && now < stop) {
+      currentProg = item;
+      break;
+    }
+  }
+
+  // Если текущей нет, берем первую, которая начнется
+  if (!currentProg) {
+    for (let i = 0; i < channelEpg.length; i++) {
+       const start = parseEPGDate(channelEpg[i].start_iso);
+       if (start && start > now) {
+           currentProg = channelEpg[i];
+           break;
+       }
+    }
+  }
+
+  // Вставляем всё в один HTML-элемент
+  const progTitle = currentProg ? currentProg.title : 'Программа не найдена';
+  nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> ${progTitle}`;
+
+  nowPlayingBanner.style.display = 'block';
 }
 
 function selectChannel(i) {
@@ -201,6 +294,7 @@ function selectChannel(i) {
   }
 
   renderEPG(ch.title);
+  updateNowPlayingBanner(ch.title);
 
   placeholder.style.display = 'none';
   videoContainer.style.display = 'block';
@@ -252,10 +346,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft')  { e.preventDefault(); selectChannel(activeIndex - 1); }
 });
 
-// Обновление списка EPG при возврате на вкладку (чтобы «съехало» к текущей)
+// Обновление при возврате на вкладку
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && activeIndex >= 0 && CHANNELS[activeIndex]) {
     renderEPG(CHANNELS[activeIndex].title);
+    updateNowPlayingBanner(CHANNELS[activeIndex].title);
   }
 });
 

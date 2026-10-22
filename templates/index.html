@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <!-- Подключение современного шрифта Outfit -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Video.js CSS -->
+  <link href="https://vjs.zencdn.net/8.23.8/video-js.css" rel="stylesheet" />  
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ТВ Онлайн</title>
@@ -16,20 +23,30 @@
 
   <div class="layout">
     <div class="top-row">
-      <div class="player-wrapper">
-        <div class="video-placeholder" id="placeholder">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="4" width="20" height="16" rx="2"/>
-            <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
-          </svg>
-          <p>Выберите канал ниже</p>
+      
+      <!-- ОБЕРТКА ДЛЯ ПЛЕЕРА И БАННЕРА -->
+      <div class="video-column">
+        <div class="player-wrapper">
+          <div class="video-placeholder" id="placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
+            </svg>
+            <p>Выберите канал ниже</p>
+          </div>
+          
+          <div id="video-container" style="width: 100%; height: 100%; display: none;">
+            <video id="video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline></video>
+          </div>
         </div>
-        
-        <div id="video-container" style="width: 100%; height: 100%; display: none;">
-          <video id="video" class="video-js vjs-big-play-centered vjs-fluid" controls preload="auto" playsinline></video>
+
+        <!-- ПЛАШКА СЕЙЧАС ИДЁТ (Теперь здесь только ОДИН тег span) -->
+        <div class="now-playing-banner" id="nowPlayingBanner" style="display: none;">
+          <span id="nowPlayingText"></span>
         </div>
       </div>
 
+      <!-- ПАНЕЛЬ СПРАВА -->
       <div class="info-panel">
         <div class="channel-header">
           <div class="big-logo" id="infoLogo">1</div>
