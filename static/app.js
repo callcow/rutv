@@ -242,7 +242,7 @@ function initCustomPlayer() {
 
   const el = player.el();
 
-  // Создаем невидимый слой для перехвата кликов (чтобы работало и на ПК, и на телефоне)
+  // Слой для кликов
   const clickOverlay = document.createElement('div');
   clickOverlay.className = 'cv-click-overlay';
   el.appendChild(clickOverlay);
@@ -308,28 +308,67 @@ function initCustomPlayer() {
     }, 800);
   };
 
-  // Обработка клика по оверлею (работает и на ПК, и на тач-экранах)
+  // Простая переменная для отслеживания, виден ли бар
+  let isBarVisible = false;
+  let barHideTimeout;
+
+  const showBar = () => {
+    isBarVisible = true;
+    el.classList.add('cv-visible');
+    clearTimeout(barHideTimeout);
+    
+    // Если видео играет, скрываем бар через 3 сек
+    if (!player.paused()) {
+      barHideTimeout = setTimeout(() => {
+        isBarVisible = false;
+        el.classList.remove('cv-visible');
+      }, 3000);
+    }
+  };
+
+  // ЛОГИКА КЛИКА ПО ВИДЕО
   clickOverlay.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (player.paused()) {
-      player.play();
-      showCenterBtn(true);
+    
+    if (!isBarVisible) {
+      // Если бар скрыт — показываем его
+      showBar();
     } else {
-      player.pause();
-      showCenterBtn(false);
+      // Если бар уже есть — ставим паузу
+      if (player.paused()) {
+        player.play();
+        showCenterBtn(true);
+      } else {
+        player.pause();
+        showCenterBtn(false);
+      }
+      showBar(); // Продлеваем показ бара после клика
     }
-    // Показываем бар на мобилках при тапе
-    el.classList.add('cv-visible');
   });
 
   // Обработчики кнопок
-  btnPlay.addEventListener('click', () => player.paused() ? player.play() : player.pause());
-  btnMute.addEventListener('click', () => player.muted(!player.muted()));
-  btnFs.addEventListener('click', () => player.isFullscreen() ? player.exitFullscreen() : player.requestFullscreen());
+  btnPlay.addEventListener('click', (e) => {
+    e.stopPropagation();
+    player.paused() ? player.play() : player.pause();
+    showBar();
+  });
+  
+  btnMute.addEventListener('click', (e) => {
+    e.stopPropagation();
+    player.muted(!player.muted());
+    showBar();
+  });
+  
+  btnFs.addEventListener('click', (e) => {
+    e.stopPropagation();
+    player.isFullscreen() ? player.exitFullscreen() : player.requestFullscreen();
+    showBar();
+  });
 
   volumeSlider.addEventListener('input', (e) => {
     player.volume(parseFloat(e.target.value));
     if (player.volume() > 0 && player.muted()) player.muted(false);
+    showBar();
   });
 
   player.on('volumechange', () => {
@@ -339,12 +378,20 @@ function initCustomPlayer() {
     volumeSlider.style.setProperty('--vol', `${vol * 100}%`);
   });
 
-  player.on('play', () => { btnPlay.innerHTML = pauseSvg; });
-  player.on('pause', () => { btnPlay.innerHTML = playSvg; });
+  player.on('play', () => { 
+    btnPlay.innerHTML = pauseSvg; 
+    showBar();
+  });
+  
+  player.on('pause', () => { 
+    btnPlay.innerHTML = playSvg; 
+    showBar(); 
+  });
 
   qualityBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     qualityMenu.classList.toggle('show');
+    showBar();
   });
 
   document.addEventListener('click', () => {
@@ -371,11 +418,13 @@ function initCustomPlayer() {
       const item = document.createElement('div');
       item.className = 'cv-quality-item';
       item.textContent = `${level.height}p`;
-      item.onclick = () => {
+      item.onclick = (e) => {
+        e.stopPropagation();
         setLevel(i);
         qualityBtn.textContent = `${level.height}p`;
         updateQualityUI(`${level.height}p`);
         qualityMenu.classList.remove('show');
+        showBar();
       };
       qualityMenu.appendChild(item);
     }
@@ -383,11 +432,13 @@ function initCustomPlayer() {
     const autoBtn = document.createElement('div');
     autoBtn.className = 'cv-quality-item';
     autoBtn.textContent = 'Авто';
-    autoBtn.onclick = () => {
+    autoBtn.onclick = (e) => {
+      e.stopPropagation();
       setLevel(-1);
       qualityBtn.textContent = 'Авто';
       updateQualityUI('Авто');
       qualityMenu.classList.remove('show');
+      showBar();
     };
     qualityMenu.appendChild(autoBtn);
 
@@ -407,21 +458,16 @@ function initCustomPlayer() {
     }
   });
 
-  // Автоскрытие кастомного бара
-  let hideTimeout;
-  const showBar = () => {
-    el.classList.add('cv-visible');
-    clearTimeout(hideTimeout);
-    if (!player.paused()) {
-      hideTimeout = setTimeout(() => el.classList.remove('cv-visible'), 3000);
-    }
-  };
-  
+  // Показ бара при движении мыши на ПК
   el.addEventListener('mousemove', showBar);
-  el.addEventListener('touchstart', showBar); // Показ бара на тач
-  el.addEventListener('mouseleave', () => { if (!player.paused()) el.classList.remove('cv-visible'); });
-  player.on('pause', showBar);
-  player.on('play', showBar);
+  
+  // Скрываем бар, если видео играет, а мышь ушла
+  el.addEventListener('mouseleave', () => {
+    if (!player.paused()) {
+      isBarVisible = false;
+      el.classList.remove('cv-visible');
+    }
+  });
 }
 
 function selectChannel(i) {
