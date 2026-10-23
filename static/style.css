@@ -76,27 +76,6 @@ body {
 #video-container { width: 100%; height: 100%; flex: 1; position: relative; }
 #video-container .video-js { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
 
-.video-js { font-family: 'Golos Text', sans-serif; }
-.video-js .vjs-play-progress, .video-js .vjs-volume-level { background-color: var(--accent); }
-.video-js .vjs-control-bar {
-  background-color: rgba(5, 9, 20, 0.85);
-  backdrop-filter: blur(16px);
-  border-top: 1px solid var(--border-light);
-}
-.video-js .vjs-big-play-button {
-  background-color: rgba(99, 102, 241, 0.4);
-  border: 2px solid var(--accent);
-  backdrop-filter: blur(8px);
-  border-radius: 50%;
-  width: 5rem; height: 5rem;
-  line-height: 4.75rem;
-  margin-top: -2.5rem; margin-left: -2.5rem;
-  box-shadow: var(--shadow-glow);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.video-js:hover .vjs-big-play-button { background-color: var(--accent); transform: scale(1.1); }
-.video-js .vjs-texttrack-settings { display: none !important; }
-
 .video-placeholder {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -300,7 +279,265 @@ body {
 .epg-item.now-playing .epg-title-text { font-weight: 600; color: #ffffff; }
 
 /* =========================================
-   АДАПТИВНАЯ ВЕРСТКА ДЛЯ МОБИЛЬНЫХ
+   КАСТОМНЫЙ ПЛЕЕР VIDEO.JS
+   ========================================= */
+
+.video-js {
+  font-family: 'Golos Text', sans-serif;
+  font-size: 14px;
+  background: #000;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+/* Центральная большая кнопка Play */
+.video-js .vjs-big-play-button {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  border: none;
+  background: rgba(99, 102, 241, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  line-height: 6rem;
+  box-shadow: 
+    0 0 0 0 rgba(99, 102, 241, 0.6),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.video-js .vjs-big-play-button .vjs-icon-placeholder::before {
+  font-size: 2.5rem;
+  line-height: 6rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.video-js:hover .vjs-big-play-button {
+  background: var(--accent);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.6), 0 20px 60px rgba(0, 0, 0, 0.6); }
+  50%      { box-shadow: 0 0 0 20px rgba(99, 102, 241, 0), 0 20px 60px rgba(0, 0, 0, 0.6); }
+}
+
+/* =========================================
+   ИДЕАЛЬНОЕ ВЫРАВНИВАНИЕ КОНТРОЛ-БАРА
+   ========================================= */
+
+.video-js .vjs-control-bar {
+  height: 3.5rem !important;
+  padding: 0 1rem !important;
+  background: linear-gradient(to top, rgba(5, 9, 20, 0.95) 0%, rgba(5, 9, 20, 0.7) 60%, transparent 100%);
+  border-top: none;
+  
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start;
+  gap: 0.5rem !important;
+  transition: opacity 0.3s ease;
+}
+
+/* Сброс высот для всех элементов */
+.video-js .vjs-control-bar > * {
+  margin: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Убираем отображение элементов, которых не должно быть */
+.video-js .vjs-audio-button,
+.video-js .vjs-subs-caps-button,
+.video-js .vjs-playback-rate,
+.video-js .vjs-picture-in-picture-control,
+.video-js .vjs-chapters-button,
+.video-js .vjs-descriptions-button,
+.video-js .vjs-progress-control,
+.video-js .vjs-current-time,
+.video-js .vjs-duration,
+.video-js .vjs-time-divider,
+.video-js .vjs-remaining-time {
+  display: none !important;
+}
+
+/* Кнопки */
+.video-js .vjs-button {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  border-radius: 8px;
+  color: var(--text-main);
+  transition: background 0.2s, color 0.2s;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-js .vjs-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+/* Иконки */
+.video-js .vjs-button .vjs-icon-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.video-js .vjs-button .vjs-icon-placeholder::before {
+  font-size: 1.3rem !important;
+  line-height: 1 !important;
+}
+
+/* Кнопка Play */
+.video-js .vjs-play-control {
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+}
+.video-js .vjs-play-control .vjs-icon-placeholder::before {
+  font-size: 1.7rem !important;
+}
+
+/* Громкость */
+.video-js .vjs-volume-panel {
+  display: flex !important;
+  align-items: center;
+  height: 100%;
+}
+.video-js .vjs-mute-control {
+  height: 2.5rem !important;
+}
+.video-js .vjs-volume-control {
+  width: 5rem !important;
+  margin: 0 0.5rem !important;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+.video-js .vjs-volume-bar {
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0;
+}
+.video-js .vjs-volume-level {
+  background: var(--text-main);
+  border-radius: 4px;
+}
+.video-js .vjs-mute-control:hover ~ .vjs-volume-control .vjs-volume-level,
+.video-js .vjs-volume-control:hover .vjs-volume-level {
+  background: var(--accent);
+}
+
+/* Выравниваем правую часть (HD и Fullscreen) */
+.video-js .vjs-quality-menu-button {
+  margin-left: auto !important; /* Жестко прижимает HD вправо */
+}
+
+.video-js .vjs-fullscreen-control {
+  margin-left: 0 !important;
+}
+
+/* Бейдж HD */
+.video-js .vjs-quality-menu-button .vjs-icon-placeholder::before {
+  content: 'HD';
+  font-family: 'Golos Text', sans-serif;
+  font-weight: 800;
+  font-size: 0.7rem;
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  padding: 1px 4px;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Меню качества */
+.video-js .vjs-menu-button-popup .vjs-menu {
+  background: rgba(17, 25, 40, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-main);
+  padding: 0.4rem;
+  bottom: 2.8rem !important;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 10rem;
+}
+
+.video-js .vjs-menu-content {
+  max-height: 16rem;
+  padding: 0;
+}
+
+.video-js .vjs-menu-item {
+  padding: 0.6rem 1rem;
+  margin: 0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+  text-transform: none;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.video-js .vjs-menu-item:hover {
+  background: var(--bg-item-hover);
+}
+
+.video-js .vjs-menu-item.vjs-selected {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.video-js .vjs-menu-item.vjs-selected::before {
+  display: none;
+}
+
+.video-js .vjs-menu li .vjs-menu-item-text {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Прячем неиспользуемые элементы */
+.video-js .vjs-texttrack-settings {
+  display: none !important;
+}
+
+/* Скрываем контролы, когда мышь не двигается */
+.video-js.vjs-user-inactive.vjs-playing .vjs-control-bar {
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.video-js.vjs-user-active .vjs-control-bar,
+.video-js.vjs-paused .vjs-control-bar {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =========================================
+   МОБИЛЬНЫЙ ПЛЕЕР (АДАПТИВ)
    ========================================= */
 @media (max-width: 900px) {
   .layout { padding: 0.5rem; gap: 0.5rem; overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -351,44 +588,35 @@ body {
 
   .info-panel { order: 3; width: 100%; flex: none; border-radius: var(--radius-xl); padding: 0.75rem; }
   
-    /* КАРТОЧКИ ПЕРЕДАЧ НА ТЕЛЕФОНЕ */
-  .epg-item { 
-    display: flex; 
-    align-items: center; /* Оставляем выравнивание по центру */
-    padding: 0.75rem 1rem; 
-    padding-right: 1rem; 
-    gap: 0.75rem;
-  }
-  
   /* КАРТОЧКИ ПЕРЕДАЧ НА ТЕЛЕФОНЕ */
   .epg-item { 
     display: flex; 
-    align-items: center; /* ВОТ ЭТО: центрируем текст относительно левой колонки */
+    align-items: center;
     padding: 0.75rem 1rem; 
     padding-right: 1rem; 
     gap: 0.75rem;
   }
   
-   /* Левая колонка: время и плашка */
+  /* Левая колонка: время и плашка */
   .epg-time { 
     position: static; 
     font-size: 0.9rem; 
     display: flex;
-    flex-direction: column; /* Время сверху, плашка снизу */
-    align-items: center; /* ВОТ ЭТО: центрируем время над плашкой */
+    flex-direction: column;
+    align-items: center;
     gap: 0.4rem;
     min-width: 4.5rem; 
     margin-top: 0.1rem; 
   }
 
-   /* Текст справа */
+  /* Текст справа */
   .epg-name { 
     padding-left: 0; 
     padding-right: 0; 
     width: 100%; 
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Центрируем текст по вертикали в его блоке */
+    justify-content: center;
     gap: 0.4rem; 
   }
 
@@ -406,6 +634,51 @@ body {
     padding: 3px 6px;
     white-space: nowrap;
   }
+
+  /* МОБИЛЬНЫЙ ПЛЕЕР */
+  .video-js .vjs-control-bar {
+    height: 3rem !important;
+    padding: 0 0.5rem !important;
+    gap: 0.25rem !important;
+  }
+
+  .video-js .vjs-button {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+  }
+
+  .video-js .vjs-play-control {
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+
+  .video-js .vjs-play-control .vjs-icon-placeholder::before {
+    font-size: 1.5rem !important;
+  }
+
+  .video-js .vjs-button .vjs-icon-placeholder::before {
+    font-size: 1.1rem !important;
+  }
+
+  .video-js .vjs-volume-panel {
+    display: none !important;
+  }
+
+  .video-js .vjs-big-play-button {
+    width: 4rem;
+    height: 4rem;
+    line-height: 4rem;
+  }
+
+  .video-js .vjs-big-play-button .vjs-icon-placeholder::before {
+    font-size: 1.6rem;
+    line-height: 4rem;
+  }
+
+  .video-js .vjs-menu-button-popup .vjs-menu {
+    min-width: 8rem;
+    bottom: 2.2rem !important;
+  }
 }
 
 /* СКРОЛЛБАРЫ */
@@ -416,3 +689,312 @@ body {
 ::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.3); }
 
 * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
+
+/* =========================================
+   КАСТОМНЫЙ КОНТРОЛ-БАР (ЗАМЕНА НАТИВНОГО)
+   ========================================= */
+
+/* Убираем все нативные контролы к чертям */
+.video-js .vjs-control-bar {
+  display: none !important;
+}
+
+.custom-video-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4rem;
+  background: linear-gradient(to top, rgba(5, 9, 20, 0.95) 0%, rgba(5, 9, 20, 0.7) 60%, transparent 100%);
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 0.5rem;
+  z-index: 100;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.vjs-custom-bar-active.cv-visible .custom-video-bar,
+.vjs-custom-bar-active.vjs-paused .custom-video-bar {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.cv-btn {
+  background: transparent;
+  border: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: background 0.2s;
+}
+
+.cv-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.cv-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+
+.cv-spacer {
+  flex: 1;
+}
+
+.cv-quality {
+  font-family: 'Golos Text', sans-serif;
+  font-weight: 800;
+  font-size: 0.75rem;
+  border: 1.5px solid var(--text-main);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-right: 0.5rem;
+  color: var(--text-main);
+  cursor: default;
+}
+
+/* Скрываем кнопку Play по центру от Video.js, так как она нам не нужна */
+.video-js .vjs-big-play-button {
+  display: none !important;
+}
+
+/* Мобильная адаптация для кастомного бара */
+@media (max-width: 900px) {
+  .custom-video-bar {
+    height: 3rem;
+    padding: 0 0.5rem;
+  }
+  .cv-btn {
+    width: 2rem;
+    height: 2rem;
+  }
+  .cv-btn svg {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+  .cv-quality {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+  }
+}
+
+/* =========================================
+   ДОПОЛНИТЕЛЬНЫЕ ЭЛЕМЕНТЫ (LIVE, КАЧЕСТВО)
+   ========================================= */
+
+/* Плашка LIVE с пульсирующей точкой */
+.cv-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'Golos Text', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  margin-left: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+.cv-live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #e11d48;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(225, 29, 72, 0.6);
+  animation: pulse-live 2s infinite;
+}
+
+@keyframes pulse-live {
+  0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(225, 29, 72, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+/* Кнопка качества и меню */
+.cv-quality-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cv-quality-btn {
+  font-family: 'Golos Text', sans-serif;
+  font-weight: 800;
+  font-size: 0.75rem;
+  border: 1.5px solid var(--text-main);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-right: 0.5rem;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cv-quality-btn:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+.cv-quality-menu {
+  position: absolute;
+  bottom: 2.5rem;
+  right: 0;
+  background: rgba(17, 25, 40, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-main);
+  padding: 0.4rem;
+  min-width: 6rem;
+  display: none;
+  flex-direction: column;
+  z-index: 101;
+}
+
+.cv-quality-menu.show {
+  display: flex;
+}
+
+.cv-quality-item {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: center;
+}
+
+.cv-quality-item:hover {
+  background: var(--bg-item-hover);
+}
+
+.cv-quality-item.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* =========================================
+   КАСТОМНЫЙ ПОЛЗУНОК ГРОМКОСТИ (PC)
+   ========================================= */
+
+.cv-volume-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  height: 100%;
+}
+
+/* Сам ползунок */
+.cv-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0; 
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  opacity: 0;
+  transition: width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+  cursor: pointer;
+  margin: 0;
+  
+  /* Делаем заливку через градиент. --vol задается через JS */
+  background: linear-gradient(to right, #fff var(--vol, 100%), rgba(255, 255, 255, 0.2) var(--vol, 100%));
+}
+
+/* При наведении на обертку - показываем */
+.cv-volume-wrapper:hover .cv-volume-slider,
+.cv-volume-slider:focus {
+  width: 70px;
+  opacity: 1;
+  margin-left: 10px;
+}
+
+/* Кружок для Chrome/Safari/Edge */
+.cv-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  transition: transform 0.1s;
+}
+
+.cv-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Кружок для Firefox */
+.cv-volume-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+
+/* Скрываем ползунок на мобильных */
+@media (max-width: 900px) {
+  .cv-volume-slider {
+    display: none !important;
+  }
+}
+
+/* =========================================
+   ФИКС МЕНЮ КАЧЕСТВА НА МОБИЛЬНЫХ
+   ========================================= */
+
+/* =========================================
+   ФИКС МЕНЮ КАЧЕСТВА НА МОБИЛЬНЫХ
+   ========================================= */
+
+/* =========================================
+   ФИКС МЕНЮ КАЧЕСТВА НА МОБИЛЬНЫХ
+   ========================================= */
+
+@media (max-width: 900px) {
+  /* Опускаем меню еще ниже */
+  .cv-quality-menu {
+    position: absolute;
+    bottom: 1rem !important; /* Опустили почти вплотную к бару */
+    right: 0;
+    left: auto;
+    transform: none;
+    min-width: 5rem !important;
+    padding: 0.3rem !important;
+  }
+
+  /* Делаем шрифт чуть меньше и компактнее */
+  .cv-quality-item {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    text-align: center !important;
+  }
+
+  /* Чуть уменьшаем саму кнопку "Авто/HD" */
+  .cv-quality-btn {
+    font-size: 0.65rem !important;
+    padding: 1px 4px !important;
+    margin-right: 0.25rem !important;
+  }
+}
