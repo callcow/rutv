@@ -1,85 +1,148 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050914">
+  <title>ТВ онлайн</title>
+
+  <!-- Шрифт -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link href="https://vjs.zencdn.net/8.23.8/video-js.css" rel="stylesheet" />  
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ТВ Онлайн</title>
+  <!-- Video.js -->
+  <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet">
 
-  <link href="https://vjs.zencdn.net/8.23.8/video-js.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.css" rel="stylesheet">
-
+  <!-- Стили проекта -->
   <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
-
   <div class="layout">
-    
+
+    <!-- ============================================================
+         ВЕРХНИЙ РЯД: ПЛЕЕР + ПАНЕЛЬ КАНАЛА
+         ============================================================ -->
     <div class="top-row">
-      <!-- ЛЕВАЯ КОЛОНКА (ПЛЕЕР) -->
+
+      <!-- Левая колонка: плеер -->
       <div class="video-column">
         <div class="player-wrapper">
-          <div class="video-placeholder" id="placeholder">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="4" width="20" height="16" rx="2"/>
-              <path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none"/>
-            </svg>
-            <p>Выберите канал ниже</p>
+          <div id="video-container">
+            <video
+              id="video"
+              class="video-js vjs-default-skin"
+              playsinline
+              controls
+              preload="auto"
+            ></video>
+
+            <!-- Плейсхолдер до первого выбора канала -->
+            <div id="placeholder" class="video-placeholder">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+              </svg>
+              <div>Выберите канал</div>
+            </div>
           </div>
-          
-          <div id="video-container" style="width: 100%; height: 100%; display: none;">
-            <video id="video" class="video-js" preload="auto" playsinline></video>
-          </div>
+        </div>
+
+        <!-- Баннер "сейчас идёт" под плеером (виден только на мобильных) -->
+        <div id="nowPlayingBanner" class="now-playing-banner" style="display:none;">
+          <span id="nowPlayingText"></span>
         </div>
       </div>
 
-      <!-- ПРАВАЯ КОЛОНКА (ПАНЕЛЬ ПРОГРАММЫ) -->
-      <div class="info-panel">
+      <!-- Правая колонка: панель с информацией о канале и программой -->
+      <aside class="info-panel">
+
+                <!-- Заголовок канала + кнопка "избранное" -->
         <div class="channel-header">
-          <div class="big-logo" id="infoLogo">1</div>
-          <div class="channel-title" id="infoTitle">Первый Канал</div>
+          <div class="big-logo" id="infoLogo"></div>
+          <div class="channel-title" id="infoTitle">Выберите канал</div>
+          <button class="fav-toggle" id="favToggle" title="В избранное" aria-label="В избранное">
+            <svg viewBox="0 0 24 24" class="heart-icon">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+          </button>
         </div>
-        <div class="epg-list" id="epgList">
-          <!-- Программа передач генерируется через JS -->
+
+                <!-- Дата и день недели -->
+        <div class="epg-date-header" id="epgDateHeader"></div>
+
+        <!-- Вкладки по дням -->
+        <div class="epg-tabs">
+          <button class="epg-tab active" data-day="0">Сегодня</button>
+          <button class="epg-tab" data-day="1">Завтра</button>
+          <button class="epg-tab" data-day="2">Послезавтра</button>
         </div>
-      </div>
+
+        <!-- Список передач -->
+        <div class="epg-list" id="epgList"></div>
+
+      </aside>
+
     </div>
 
-    <!-- ПЛАШКА "СЕЙЧАС ИДЁТ" -->
-    <div class="now-playing-banner" id="nowPlayingBanner" style="display: none;">
-      <span id="nowPlayingText"></span>
+    <!-- ============================================================
+         ПОИСК КАНАЛОВ
+         ============================================================ -->
+    <div class="search-wrapper">
+      <input
+        type="text"
+        id="channelSearch"
+        class="channel-search"
+        placeholder="Поиск канала..."
+        autocomplete="off"
+        spellcheck="false"
+      >
     </div>
 
-    <!-- ФИЛЬТРЫ КАНАЛОВ -->
+        <!-- ============================================================
+         ФИЛЬТРЫ
+         ============================================================ -->
     <div class="filters-wrapper">
-      <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Все</button>
-      <button class="filter-btn" data-filter="federal" onclick="setFilter('federal')">Федеральные</button>
-      <button class="filter-btn" data-filter="entertainment" onclick="setFilter('entertainment')">Развлекательные</button>
-      <button class="filter-btn" data-filter="movie" onclick="setFilter('movie')">Кино</button>
-      <button class="filter-btn" data-filter="sport" onclick="setFilter('sport')">Спорт</button>
-      <button class="filter-btn" data-filter="news" onclick="setFilter('news')">Новости</button>
+      <button class="filter-btn" data-filter="favorites">
+        <svg viewBox="0 0 24 24" class="filter-heart">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+        Любимые
+      </button>
+      <button class="filter-btn active" data-filter="all">Все</button>
+      <button class="filter-btn" data-filter="federal">Федеральные</button>
     </div>
 
-    <!-- КАРУСЕЛЬ КАНАЛОВ -->
+    <!-- ============================================================
+         КАРУСЕЛЬ КАНАЛОВ
+         ============================================================ -->
     <div class="carousel-wrapper">
-      <button class="scroll-btn" id="scrollLeftBtn" style="display: none;">‹</button>
-      <div class="channel-carousel" id="channelList">
-        <!-- Список каналов -->
-      </div>
-      <button class="scroll-btn" id="scrollRightBtn">›</button>
+      <button id="scrollLeftBtn" class="scroll-btn" aria-label="Прокрутить влево">‹</button>
+      <div class="channel-carousel" id="channelList"></div>
+      <button id="scrollRightBtn" class="scroll-btn" aria-label="Прокрутить вправо">›</button>
     </div>
+
   </div>
 
-<script>
-  const ENCODED_CHANNELS = $CHANNELS;
-  const EPG_DATA = $EPG_DATA;
-</script>
-<script src="https://vjs.zencdn.net/8.23.8/video.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/videojs-contrib-quality-menu@1.0.3/dist/videojs-contrib-quality-menu.min.js"></script>
-<script src="static/app.js"></script>
+  <!-- ============================================================
+       ДАННЫЕ (подставляются build.py)
+       ============================================================ -->
+  <script>
+    // Зашифрованный base64 список каналов (подставляет build.py)
+    const ENCODED_CHANNELS = $CHANNELS;
+
+    // EPG-данные (подставляет build.py)
+    const EPG_DATA = $EPG_DATA;
+  </script>
+
+  <!-- Video.js -->
+  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
+  <!-- VHS (для HLS) -->
+  <script src="https://unpkg.com/@videojs/http-streaming@3.10.0/dist/videojs-http-streaming.min.js"></script>
+
+   <!-- Контейнер для всплывающих уведомлений -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Логика приложения -->
+  <script src="static/app.js"></script>
 </body>
 </html>

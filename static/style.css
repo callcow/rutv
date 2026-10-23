@@ -155,6 +155,27 @@ body {
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem; /* Отступ между сердечком и текстом */
+}
+
+/* Сердечко внутри кнопки фильтра */
+.filter-heart {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor; /* Будет краситься в цвет текста кнопки */
+  transition: fill 0.2s;
+}
+
+/* При наведении на кнопку "Любимые" сердечко становится красным */
+.filter-btn[data-filter="favorites"]:hover .filter-heart {
+  fill: #f43f5e;
+}
+
+/* Когда фильтр "Любимые" активен, сердечко заливается красным */
+.filter-btn[data-filter="favorites"].active .filter-heart {
+  fill: #fff; /* В активном состоянии кнопка синяя, сердечко белое для контраста */
 }
 
 .filter-btn:hover {
@@ -164,11 +185,10 @@ body {
 
 .filter-btn.active {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: transparent;
   color: #fff;
-  box-shadow: var(--shadow-glow);
+  box-shadow: none; /* Полностью убираем тень */
 }
-
 /* КАРУСЕЛЬ */
 .carousel-wrapper {
   display: flex; align-items: center; gap: 1rem;
@@ -200,8 +220,11 @@ body {
 }
 
 .channel-item:hover .channel-card-inner { background: var(--bg-item-hover); box-shadow: 0 12px 24px rgba(0,0,0,0.5); }
-.channel-item.active .channel-card-inner { border-color: var(--accent); box-shadow: var(--shadow-glow); background: rgba(99, 102, 241, 0.15); }
-
+.channel-item.active .channel-card-inner { 
+  border-color: transparent;
+  background: rgba(99, 102, 241, 0.25);
+  box-shadow: none; /* Полностью убираем тень */
+}
 .channel-logo {
   width: 100%; height: 100%; display: flex; align-items: center;
   justify-content: center; font-size: 1.5rem; font-weight: 900;
@@ -239,7 +262,7 @@ body {
   cursor: pointer; flex-shrink: 0; transition: all 0.2s;
   box-shadow: 0 8px 16px rgba(0,0,0,0.3);
 }
-.scroll-btn:hover { background: var(--accent); border-color: var(--accent-hover); box-shadow: var(--shadow-glow); transform: scale(1.05); }
+.scroll-btn:hover { background: var(--accent); border-color: var(--accent-hover); box-shadow: none; transform: scale(1.05); }
 
 /* КАРТОЧКИ ПЕРЕДАЧ */
 .epg-item {
@@ -681,4 +704,491 @@ body {
 
   /* панель не влияет на высоту ряда, а просто растягивается под плеер */
   .info-panel { contain: size; }
+}
+
+/* =========================================
+   ПОИСК
+   ========================================= */
+.search-wrapper {
+  order: 1.5;
+  flex-shrink: 0;
+  padding: 0 0.5rem;
+}
+
+.channel-search {
+  width: 100%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: 'Golos Text', sans-serif;
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.channel-search::placeholder { color: var(--text-muted); }
+.channel-search:focus {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+@media (max-width: 900px) {
+  .search-wrapper { order: 1.7; padding: 0 0.5rem 0.25rem; }
+  .channel-search { font-size: 0.85rem; padding: 0.4rem 0.75rem; }
+}
+
+/* =========================================
+   СЕРДЕЧКО "ИЗБРАННОЕ" НА КАРТОЧКЕ
+   ========================================= */
+.channel-card-inner .fav-star {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  transition: opacity 0.2s, background 0.2s, transform 0.2s;
+  opacity: 0;
+  padding: 0;
+}
+
+.channel-card-inner .fav-star .heart-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: rgba(255, 255, 255, 0.55);
+  transition: fill 0.2s, transform 0.2s;
+  transform-origin: center;
+}
+
+.channel-item:hover .fav-star,
+.channel-item.active .fav-star,
+.channel-card-inner .fav-star.active {
+  opacity: 1;
+}
+
+.channel-card-inner .fav-star:hover {
+  background: rgba(244, 63, 94, 0.25);
+  transform: scale(1.12);
+}
+.channel-card-inner .fav-star:hover .heart-icon {
+  fill: #f43f5e;
+}
+
+/* Активное сердечко — красное */
+.channel-card-inner .fav-star.active {
+  background: rgba(244, 63, 94, 0.25);
+}
+.channel-card-inner .fav-star.active .heart-icon {
+  fill: #f43f5e;
+  animation: heartPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes heartPop {
+  0%   { transform: scale(0.4); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Анимация "взрыва" при клике */
+.channel-card-inner .fav-star.burst .heart-icon {
+  animation: heartBurst 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes heartBurst {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.5); }
+  60%  { transform: scale(0.85); }
+  100% { transform: scale(1); }
+}
+
+/* Частицы-искры, разлетающиеся от сердечка */
+.channel-card-inner .fav-star .heart-particle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f43f5e;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: particleBurst 0.65s ease-out forwards;
+  box-shadow: 0 0 6px rgba(244, 63, 94, 0.8);
+}
+
+.channel-card-inner .fav-star .heart-particle:nth-child(3n) {
+  background: #fb7185;
+}
+.channel-card-inner .fav-star .heart-particle:nth-child(3n+1) {
+  background: #fda4af;
+  width: 4px;
+  height: 4px;
+}
+
+@keyframes particleBurst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) scale(0.2);
+  }
+}
+
+@media (max-width: 900px) {
+  .channel-card-inner .fav-star {
+    width: 1.5rem;
+    height: 1.5rem;
+    top: 2px;
+    left: 2px;
+    opacity: 1;
+  }
+  .channel-card-inner .fav-star .heart-icon {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
+/* =========================================
+   КНОПКА "ИЗБРАННОЕ" В ПАНЕЛИ КАНАЛА
+   ========================================= */
+.channel-header { position: relative; }
+
+.fav-toggle {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+}
+
+.fav-toggle .heart-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;                 /* По умолчанию сердечко пустое (только контур) */
+  stroke: currentColor;       /* Цвет контура берется из .fav-toggle (серый) */
+  stroke-width: 2;            /* Толщина линии */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: fill 0.2s, stroke 0.2s, transform 0.2s;
+  transform-origin: center;
+}
+
+.fav-toggle:hover {
+  transform: scale(1.1);
+}
+.fav-toggle:hover .heart-icon {
+  stroke: #f43f5e;            /* При наведении контур становится красным */
+}
+
+.fav-toggle.active .heart-icon {
+  fill: #f43f5e;              /* При добавлении в любимые заливается красным */
+  stroke: #f43f5e;
+}
+
+/* Пульс при клике */
+.fav-toggle.pulse .heart-icon {
+  animation: heartPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* =========================================
+   ВКЛАДКИ EPG ПО ДНЯМ
+   ========================================= */
+.epg-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+  flex-shrink: 0;
+}
+
+.epg-tab {
+  flex: 1;
+  background: var(--bg-item);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: 'Golos Text', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.epg-tab:hover { background: var(--bg-item-hover); color: var(--text-main); }
+.epg-tab.active {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: none; /* Полностью убираем тень */
+}
+
+@media (max-width: 900px) {
+  .epg-tab { font-size: 0.7rem; padding: 0.35rem 0.3rem; }
+}
+
+/* =========================================
+   ОПИСАНИЕ ПЕРЕДАЧИ (МОДАЛКА)
+   ========================================= */
+.desc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 9, 20, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+.desc-overlay.show { display: flex; animation: fadeIn 0.2s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.desc-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-main), var(--shadow-glow);
+  padding: 1.5rem;
+  max-width: 34rem;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  color: var(--text-main);
+}
+
+.desc-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: var(--text-main);
+  font-size: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.desc-close:hover { background: rgba(255, 255, 255, 0.15); }
+
+.desc-time {
+  color: var(--accent-hover);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.5px;
+}
+.desc-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
+  padding-right: 2rem;
+}
+.desc-text {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+/* =========================================
+   ОФФЛАЙН-ОВЕРЛЕЙ (КАНАЛ НЕДОСТУПЕН)
+   ========================================= */
+.cv-offline {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 9, 20, 0.92);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  z-index: 200;
+  backdrop-filter: blur(4px);
+}
+.cv-offline-text {
+  color: var(--text-main);
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0 1rem;
+}
+.cv-offline-retry {
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  font-family: 'Golos Text', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.6rem 1.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+}
+.cv-offline-retry:hover { background: var(--accent-hover); }
+.cv-offline-retry:active { transform: scale(0.97); }
+
+/* =========================================
+   КНОПКИ ПРОКРУТКИ КАРУСЕЛИ
+   ========================================= */
+/* Левая кнопка по умолчанию скрыта — JS покажет её при скролле */
+#scrollLeftBtn {
+  display: none;
+}
+
+/* На мобилках обе кнопки скрыты */
+@media (max-width: 900px) {
+  #scrollLeftBtn,
+  #scrollRightBtn {
+    display: none !important;
+  }
+}
+
+/* =========================================
+   ДАТА В ПАНЕЛИ EPG
+   ========================================= */
+.epg-date-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+  margin-top: 0.25rem;
+  padding-left: 0.25rem;
+  opacity: 0.9;
+}
+
+/* =========================================
+   ВСПЛЫВАЮЩИЕ УВЕДОМЛЕНИЯ (ТОСТЫ)
+   ========================================= */
+.toast-container {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast {
+  background: rgba(17, 25, 40, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: auto;
+}
+
+.toast.toast-hide {
+  animation: toastOut 0.3s ease forwards;
+}
+
+.toast .toast-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast .toast-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.toast.toast-success {
+  border-color: rgba(244, 63, 94, 0.4);
+}
+.toast.toast-success .toast-icon {
+  fill: #f43f5e;
+}
+
+.toast.toast-remove {
+  border-color: var(--border-light);
+}
+.toast.toast-remove .toast-icon {
+  fill: var(--text-muted);
+}
+
+@keyframes toastIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+}
+
+/* На мобилках — пониже и пошире */
+@media (max-width: 900px) {
+  .toast-container {
+    bottom: 1rem;
+    width: calc(100% - 1rem);
+    padding: 0 0.5rem;
+  }
+  .toast {
+    width: 100%;
+    font-size: 0.85rem;
+    padding: 0.65rem 1rem;
+  }
 }

@@ -116,7 +116,7 @@ def parse_epg(xml_data):
 
     now = datetime.now(MSK)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    horizon = now + timedelta(days=2)
+    horizon = now + timedelta(days=3)
 
     temp = {}
 
@@ -144,12 +144,19 @@ def parse_epg(xml_data):
         raw_title = title_el.text if title_el is not None else ''
         prog_title = clean_title(raw_title)
 
+        desc_el = prog.find('desc')
+        prog_desc = (desc_el.text or '').strip() if desc_el is not None else ''
+        # Ограничим длину на всякий случай
+        if prog_desc:
+            prog_desc = re.sub(r'\s+', ' ', prog_desc)[:800]
+
         key = (our_title, start_dt)
         if key not in temp:
             temp[key] = {
                 "start": start_dt,
                 "stop": stop_dt,
                 "title": prog_title,
+                "desc": prog_desc,
             }
 
     schedule = {}
@@ -158,6 +165,7 @@ def parse_epg(xml_data):
             "start": info["start"].strftime("%H:%M"),
             "stop": info["stop"].strftime("%H:%M"),
             "title": info["title"],
+            "desc": info.get("desc", ""),
             "start_iso": info["start"].isoformat(),
             "stop_iso": info["stop"].isoformat(),
         })
