@@ -242,6 +242,11 @@ function initCustomPlayer() {
 
   const el = player.el();
 
+  // Создаем невидимый слой для перехвата кликов (чтобы работало и на ПК, и на телефоне)
+  const clickOverlay = document.createElement('div');
+  clickOverlay.className = 'cv-click-overlay';
+  el.appendChild(clickOverlay);
+
   const customBar = document.createElement('div');
   customBar.className = 'custom-video-bar';
   customBar.innerHTML = `
@@ -249,7 +254,6 @@ function initCustomPlayer() {
       <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
     </button>
     
-    <!-- ГРОМКОСТЬ -->
     <div class="cv-volume-wrapper">
       <button class="cv-btn cv-mute" title="Mute/Unmute">
         <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
@@ -257,14 +261,12 @@ function initCustomPlayer() {
       <input type="range" class="cv-volume-slider" id="cvVolume" min="0" max="1" step="0.05" value="1">
     </div>
     
-    <!-- ПЛАШКА LIVE -->
     <div class="cv-live-badge">
       <span class="cv-live-dot"></span> LIVE
     </div>
 
     <div class="cv-spacer"></div>
     
-    <!-- НАСТРОЙКИ КАЧЕСТВА -->
     <div class="cv-quality-wrapper">
       <div class="cv-quality-btn" id="cvQualityBtn">Авто</div>
       <div class="cv-quality-menu" id="cvQualityMenu"></div>
@@ -278,7 +280,6 @@ function initCustomPlayer() {
   el.appendChild(customBar);
   el.classList.add('vjs-custom-bar-active');
 
-  // ЦЕНТРАЛЬНАЯ КНОПКА (АНИМАЦИЯ)
   const centerBtn = document.createElement('div');
   centerBtn.className = 'cv-center-btn';
   centerBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
@@ -298,7 +299,6 @@ function initCustomPlayer() {
 
   let centerTimeout;
 
-  // ФУНКЦИЯ ПОКАЗА ЦЕНТРАЛЬНОЙ КНОПКИ
   const showCenterBtn = (isPause) => {
     centerBtn.innerHTML = isPause ? pauseSvg : playSvg;
     centerBtn.classList.add('show');
@@ -308,31 +308,28 @@ function initCustomPlayer() {
     }, 800);
   };
 
-  // КЛИК ПО САМОМУ ВИДЕО
-  const videoElement = el.querySelector('video');
-  if (videoElement) {
-    videoElement.addEventListener('click', () => {
-      if (player.paused()) {
-        player.play();
-        showCenterBtn(true); // Показываем паузу (так как видео начало играть)
-      } else {
-        player.pause();
-        showCenterBtn(false); // Показываем плей (так как видео встало на паузу)
-      }
-    });
-  }
+  // Обработка клика по оверлею (работает и на ПК, и на тач-экранах)
+  clickOverlay.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (player.paused()) {
+      player.play();
+      showCenterBtn(true);
+    } else {
+      player.pause();
+      showCenterBtn(false);
+    }
+    // Показываем бар на мобилках при тапе
+    el.classList.add('cv-visible');
+  });
 
   // Обработчики кнопок
   btnPlay.addEventListener('click', () => player.paused() ? player.play() : player.pause());
   btnMute.addEventListener('click', () => player.muted(!player.muted()));
   btnFs.addEventListener('click', () => player.isFullscreen() ? player.exitFullscreen() : player.requestFullscreen());
 
-  // Синхронизация громкости
   volumeSlider.addEventListener('input', (e) => {
     player.volume(parseFloat(e.target.value));
-    if (player.volume() > 0 && player.muted()) {
-      player.muted(false);
-    }
+    if (player.volume() > 0 && player.muted()) player.muted(false);
   });
 
   player.on('volumechange', () => {
@@ -345,7 +342,6 @@ function initCustomPlayer() {
   player.on('play', () => { btnPlay.innerHTML = pauseSvg; });
   player.on('pause', () => { btnPlay.innerHTML = playSvg; });
 
-  // Качество
   qualityBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     qualityMenu.classList.toggle('show');
@@ -422,6 +418,7 @@ function initCustomPlayer() {
   };
   
   el.addEventListener('mousemove', showBar);
+  el.addEventListener('touchstart', showBar); // Показ бара на тач
   el.addEventListener('mouseleave', () => { if (!player.paused()) el.classList.remove('cv-visible'); });
   player.on('pause', showBar);
   player.on('play', showBar);
