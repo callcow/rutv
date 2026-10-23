@@ -30,16 +30,16 @@ const LOGO_FILES = {
 };
 
 const CHANNEL_CATEGORIES = {
-  "Первый канал": "federal", "Россия 1": "federal", "Матч ТВ": "sport",
+  // 1-й мультиплекс
+  "Первый канал": "federal", "Россия 1": "federal", "Матч ТВ": "federal",
   "НТВ": "federal", "Пятый канал": "federal", "Россия К": "federal",
-  "Россия 24": "news", "Карусель": "kids", "ОТР": "federal",
-  "ТВ Центр": "federal", "РЕН ТВ": "federal", "СПАС": "federal",
-  "СТС": "entertainment", "Домашний": "entertainment", "ТВ-3": "entertainment",
-  "Пятница": "entertainment", "Звезда": "federal", "Мир": "entertainment",
-  "ТНТ": "entertainment", "Муз-ТВ": "entertainment", "Суббота": "entertainment",
-  "Че": "entertainment", "ЦТВ": "federal", "Известия": "news",
-  "Кино ТВ": "movie", "Ю": "entertainment", "Телеканал 78": "federal",
-  "КиноСезон": "movie", "Солнце": "entertainment", "СТС Love": "entertainment"
+  "Россия 24": "federal", "Карусель": "federal", "ОТР": "federal",
+  "ТВ Центр": "federal",
+  // 2-й мультиплекс
+  "РЕН ТВ": "federal", "СПАС": "federal", "СТС": "federal",
+  "Домашний": "federal", "ТВ-3": "federal", "Пятница": "federal",
+  "Звезда": "federal", "Мир": "federal", "ТНТ": "federal",
+  "Муз-ТВ": "federal"
 };
 
 function getChannelCategory(title) {
@@ -67,6 +67,19 @@ const nowPlayingText = document.getElementById('nowPlayingText');
 let activeIndex = -1;
 let currentFilter = 'all';
 let player = null;
+let playerNowEl = null;      // плашка "сейчас идёт" внутри плеера
+let currentProgTitle = '';   // название текущей передачи
+
+function syncPlayerOverlay() {
+  if (!playerNowEl) return;
+  const textEl = playerNowEl.querySelector('.cv-now-text');
+  if (currentProgTitle) {
+    textEl.textContent = currentProgTitle;
+    playerNowEl.style.display = 'flex';
+  } else {
+    playerNowEl.style.display = 'none';
+  }
+}
 
 const EPG_ITEMS_LIMIT = 11;
 
@@ -208,6 +221,8 @@ function updateNowPlayingBanner(channelTitle) {
   if (!channelEpg || channelEpg.length === 0) {
     nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> Нет данных`;
     nowPlayingBanner.style.display = 'block';
+    currentProgTitle = '';
+    syncPlayerOverlay();
     return;
   }
   const now = new Date();
@@ -228,6 +243,9 @@ function updateNowPlayingBanner(channelTitle) {
   const progTitle = currentProg ? currentProg.title : 'Программа не найдена';
   nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> ${progTitle}`;
   nowPlayingBanner.style.display = 'block';
+
+  currentProgTitle = currentProg ? currentProg.title : '';
+  syncPlayerOverlay();
 }
 
 // --- ЛОГИКА ПЛЕЕРА ---
@@ -284,6 +302,13 @@ function initCustomPlayer() {
   centerBtn.className = 'cv-center-btn';
   centerBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
   el.appendChild(centerBtn);
+
+  // Плашка "сейчас идёт" сверху плеера
+  playerNowEl = document.createElement('div');
+  playerNowEl.className = 'cv-now-playing';
+  playerNowEl.innerHTML = `<span class="cv-now-text"></span>`;
+  el.appendChild(playerNowEl);
+  syncPlayerOverlay();
 
   const playSvg = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
   const pauseSvg = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -538,6 +563,13 @@ document.addEventListener('visibilitychange', () => {
     updateNowPlayingBanner(CHANNELS[activeIndex].title);
   }
 });
+
+// Обновляем название передачи раз в минуту, чтобы оно менялось само
+setInterval(() => {
+  if (activeIndex >= 0 && CHANNELS[activeIndex]) {
+    updateNowPlayingBanner(CHANNELS[activeIndex].title);
+  }
+}, 60000);
 
 renderChannels();
 if (CHANNELS.length > 0) {
