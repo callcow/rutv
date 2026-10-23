@@ -49,6 +49,45 @@ const LOGO_FILES = {
   "СТС Love": "stslove.png"
 };
 
+// Категории каналов (дополняй по своему вкусу)
+const CHANNEL_CATEGORIES = {
+  "Первый канал": "federal",
+  "Россия 1": "federal",
+  "Матч ТВ": "sport",
+  "НТВ": "federal",
+  "Пятый канал": "federal",
+  "Россия К": "federal",
+  "Россия 24": "news",
+  "Карусель": "kids",
+  "ОТР": "federal",
+  "ТВ Центр": "federal",
+  "РЕН ТВ": "federal",
+  "СПАС": "federal",
+  "СТС": "entertainment",
+  "Домашний": "entertainment",
+  "ТВ-3": "entertainment",
+  "Пятница": "entertainment",
+  "Звезда": "federal",
+  "Мир": "entertainment",
+  "ТНТ": "entertainment",
+  "Муз-ТВ": "entertainment",
+  "Суббота": "entertainment",
+  "Че": "entertainment",
+  "ЦТВ": "federal",
+  "Известия": "news",
+  "Кино ТВ": "movie",
+  "Ю": "entertainment",
+  "Телеканал 78": "federal",
+  "КиноСезон": "movie",
+  "Солнце": "entertainment",
+  "СТС Love": "entertainment"
+};
+
+function getChannelCategory(title) {
+  const key = Object.keys(CHANNEL_CATEGORIES).find(k => k.toLowerCase() === title.trim().toLowerCase());
+  return key ? CHANNEL_CATEGORIES[key] : "all";
+}
+
 function getLogoFile(title) {
   const titleLower = title.trim().toLowerCase();
   const key = Object.keys(LOGO_FILES).find(k => k.toLowerCase() === titleLower);
@@ -64,11 +103,11 @@ const videoContainer = document.getElementById('video-container');
 const scrollRightBtn = document.getElementById('scrollRightBtn');
 const scrollLeftBtn = document.getElementById('scrollLeftBtn');
 
-// Элементы плашки "Сейчас идёт"
 const nowPlayingBanner = document.getElementById('nowPlayingBanner');
 const nowPlayingText = document.getElementById('nowPlayingText');
 
 let activeIndex = -1;
+let currentFilter = 'all';
 let player = null;
 
 const EPG_ITEMS_LIMIT = 11;
@@ -77,14 +116,27 @@ function initials(name) {
   return name.split(/[\s\-_]+/).map(w => w[0]).filter(Boolean).join('').slice(0, 2).toUpperCase();
 }
 
+function setFilter(filter) {
+  currentFilter = filter;
+  
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+  });
+
+  renderChannels();
+}
+
 function renderChannels() {
   channelListEl.innerHTML = '';
 
   CHANNELS.forEach((ch, i) => {
+    const category = getChannelCategory(ch.title);
+    if (currentFilter !== 'all' && category !== currentFilter) return;
+
     const item = document.createElement('div');
     item.className = 'channel-item' + (i === activeIndex ? ' active' : '');
+    item.setAttribute('data-index', i);
 
-    // Плашка HD теперь внутри карточки с логотипом
     const hdBadge = ch.quality === 'HD' ? '<span class="quality-badge hd">HD</span>' : '';
 
     const logoFile = getLogoFile(ch.title);
@@ -102,7 +154,7 @@ function renderChannels() {
       </div>
     `;
 
-    item.addEventListener('click', () => selectChannel(i));
+    item.addEventListener('click', () => selectChannel(parseInt(item.getAttribute('data-index'))));
     channelListEl.appendChild(item);
   });
 }
@@ -154,42 +206,37 @@ function updateCurrentEPGHighlight() {
     const start = new Date(startStr);
     const stop = new Date(stopStr);
 
-    // Проверяем, идет ли передача сейчас
     if (now >= start && now < stop) {
       item.classList.add('now-playing');
       
-      // Добавляем плашку "В эфире"
-      if (!item.querySelector('.live-badge')) {
+      // Добавляем плашку "В эфире" ВНУТРЬ блока времени
+      const timeEl = item.querySelector('.epg-time');
+      if (timeEl && !timeEl.querySelector('.live-badge')) {
         const badge = document.createElement('span');
         badge.className = 'live-badge';
         badge.textContent = 'В эфире';
-        item.appendChild(badge);
+        timeEl.appendChild(badge);
       }
 
-      // Считаем прогресс и заливаем фон
       const total = stop - start;
       const passed = now - start;
       let percent = (passed / total) * 100;
       if (percent < 0) percent = 0;
       if (percent > 100) percent = 100;
 
-      // Применяем градиент к фону
       item.style.background = `linear-gradient(90deg, rgba(99, 102, 241, 0.35) ${percent}%, rgba(99, 102, 241, 0.05) ${percent}%)`;
       
     } else {
       item.classList.remove('now-playing');
       
-      // Убираем плашку
       const badge = item.querySelector('.live-badge');
       if (badge) badge.remove();
       
-      // Убираем заливку фона у неактивных
       item.style.background = ''; 
     }
   });
 }
 
-// Проверяем обновление раз в минуту
 setInterval(updateCurrentEPGHighlight, 60000);
 
 function renderEPG(title) {
@@ -290,7 +337,8 @@ function selectChannel(i) {
 
   renderChannels();
 
-  const activeItem = channelListEl.children[i];
+  // Прокрутка к активному каналу (ищем по data-index)
+  const activeItem = channelListEl.querySelector(`.channel-item[data-index="${i}"]`);
   if (activeItem) {
     activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }

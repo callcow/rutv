@@ -54,6 +54,16 @@
       <span id="nowPlayingText"></span>
     </div>
 
+    <!-- ФИЛЬТРЫ КАНАЛОВ -->
+    <div class="filters-wrapper">
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Все</button>
+      <button class="filter-btn" data-filter="federal" onclick="setFilter('federal')">Федеральные</button>
+      <button class="filter-btn" data-filter="entertainment" onclick="setFilter('entertainment')">Развлекательные</button>
+      <button class="filter-btn" data-filter="movie" onclick="setFilter('movie')">Кино</button>
+      <button class="filter-btn" data-filter="sport" onclick="setFilter('sport')">Спорт</button>
+      <button class="filter-btn" data-filter="news" onclick="setFilter('news')">Новости</button>
+    </div>
+
     <!-- КАРУСЕЛЬ КАНАЛОВ -->
     <div class="carousel-wrapper">
       <button class="scroll-btn" id="scrollLeftBtn" style="display: none;">‹</button>
