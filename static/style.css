@@ -998,3 +998,50 @@ body {
     margin-right: 0.25rem !important;
   }
 }
+
+/* =========================================
+   ЦЕНТРАЛЬНАЯ КНОПКА ПАУЗЫ/ПЛЕЯ (АНИМАЦИЯ)
+   ========================================= */
+
+.cv-center-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  width: 5rem;
+  height: 5rem;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 99;
+}
+
+.cv-center-btn.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.cv-center-btn svg {
+  width: 2.5rem;
+  height: 2.5rem;
+  fill: #fff;
+}
+
+/* На мобильных делаем кнопку чуть меньше */
+@media (max-width: 900px) {
+  .cv-center-btn {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+  .cv-center-btn svg {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+}

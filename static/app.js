@@ -278,6 +278,12 @@ function initCustomPlayer() {
   el.appendChild(customBar);
   el.classList.add('vjs-custom-bar-active');
 
+  // ЦЕНТРАЛЬНАЯ КНОПКА (АНИМАЦИЯ)
+  const centerBtn = document.createElement('div');
+  centerBtn.className = 'cv-center-btn';
+  centerBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+  el.appendChild(centerBtn);
+
   const playSvg = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
   const pauseSvg = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
   const volSvg = `<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>`;
@@ -290,7 +296,33 @@ function initCustomPlayer() {
   const qualityBtn = document.getElementById('cvQualityBtn');
   const qualityMenu = document.getElementById('cvQualityMenu');
 
-  // Обработчики
+  let centerTimeout;
+
+  // ФУНКЦИЯ ПОКАЗА ЦЕНТРАЛЬНОЙ КНОПКИ
+  const showCenterBtn = (isPause) => {
+    centerBtn.innerHTML = isPause ? pauseSvg : playSvg;
+    centerBtn.classList.add('show');
+    clearTimeout(centerTimeout);
+    centerTimeout = setTimeout(() => {
+      centerBtn.classList.remove('show');
+    }, 800);
+  };
+
+  // КЛИК ПО САМОМУ ВИДЕО
+  const videoElement = el.querySelector('video');
+  if (videoElement) {
+    videoElement.addEventListener('click', () => {
+      if (player.paused()) {
+        player.play();
+        showCenterBtn(true); // Показываем паузу (так как видео начало играть)
+      } else {
+        player.pause();
+        showCenterBtn(false); // Показываем плей (так как видео встало на паузу)
+      }
+    });
+  }
+
+  // Обработчики кнопок
   btnPlay.addEventListener('click', () => player.paused() ? player.play() : player.pause());
   btnMute.addEventListener('click', () => player.muted(!player.muted()));
   btnFs.addEventListener('click', () => player.isFullscreen() ? player.exitFullscreen() : player.requestFullscreen());
@@ -307,7 +339,6 @@ function initCustomPlayer() {
     btnMute.innerHTML = player.muted() || player.volume() === 0 ? muteSvg : volSvg;
     const vol = player.muted() ? 0 : player.volume();
     volumeSlider.value = vol;
-    // Обновляем CSS-переменную для закрашивания полоски
     volumeSlider.style.setProperty('--vol', `${vol * 100}%`);
   });
 
