@@ -326,24 +326,35 @@ function initCustomPlayer() {
     }
   };
 
-  // ЛОГИКА КЛИКА ПО ВИДЕО
+    // ЛОГИКА КЛИКА ПО ВИДЕО
+  // Реальное состояние бара: виден по классу или видео на паузе (CSS показывает бар)
+  const isBarShown = () =>
+    el.classList.contains('cv-visible') || player.paused();
+
+  // Запоминаем, был ли бар виден в момент касания (до эмулированных событий)
+  let barWasVisibleOnDown = false;
+  clickOverlay.addEventListener('pointerdown', () => {
+    barWasVisibleOnDown = isBarShown();
+  });
+
   clickOverlay.addEventListener('click', (e) => {
     e.stopPropagation();
-    
-    if (!isBarVisible) {
-      // Если бар скрыт — показываем его
+
+    // Бар был скрыт — только показываем, паузу не трогаем
+    if (!barWasVisibleOnDown) {
       showBar();
-    } else {
-      // Если бар уже есть — ставим паузу
-      if (player.paused()) {
-        player.play();
-        showCenterBtn(true);
-      } else {
-        player.pause();
-        showCenterBtn(false);
-      }
-      showBar(); // Продлеваем показ бара после клика
+      return;
     }
+
+    // Бар был виден — переключаем паузу
+    if (player.paused()) {
+      player.play();
+      showCenterBtn(true);
+    } else {
+      player.pause();
+      showCenterBtn(false);
+    }
+    showBar();
   });
 
   // Обработчики кнопок
@@ -458,11 +469,15 @@ function initCustomPlayer() {
     }
   });
 
-  // Показ бара при движении мыши на ПК
-  el.addEventListener('mousemove', showBar);
-  
+    // Показ бара при движении мыши на ПК (тач игнорируем, иначе тап
+  // сразу показывает бар и следующий click ставит паузу)
+  el.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse') showBar();
+  });
+
   // Скрываем бар, если видео играет, а мышь ушла
-  el.addEventListener('mouseleave', () => {
+  el.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'mouse') return;
     if (!player.paused()) {
       isBarVisible = false;
       el.classList.remove('cv-visible');

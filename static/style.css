@@ -598,18 +598,19 @@ body {
     width: 1.8rem;
     height: 1.8rem;
   }
-  .cv-quality-menu {
+    .cv-quality-menu {
     position: absolute;
-    bottom: 1rem !important;
+    bottom: 1.3rem !important;
     right: 0;
     left: auto;
     transform: none;
-    min-width: 5rem !important;
-    padding: 0.3rem !important;
+    min-width: 4rem !important;
+    padding: 0.15rem !important;
   }
   .cv-quality-item {
-    padding: 0.3rem 0.5rem !important;
-    font-size: 0.7rem !important;
+    padding: 0.15rem 0.45rem !important;
+    font-size: 0.65rem !important;
+    line-height: 1.2;
     text-align: center !important;
   }
   .cv-quality-btn {
@@ -630,3 +631,4 @@ body {
 ::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.3); }
 
 * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
+
