@@ -176,6 +176,12 @@
   let lastTapTime = 0;
   let lastTapIndex = -1;
 
+  function lockLandscape() {
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  }
+
   // ============================================================
   // EPG: панель вкладок по дням
   // ============================================================
@@ -411,9 +417,18 @@
       e.preventDefault();
       const isOpen = searchWrapper.classList.toggle('search-open');
       
-      if (isOpen) {
+        if (isOpen) {
         searchWrapper.scrollTo({ left: 0, behavior: 'smooth' });
-        setTimeout(() => channelSearch.focus(), 50);
+        const isMobileSearch = window.matchMedia('(max-width: 900px)').matches;
+        setTimeout(() => channelSearch.focus({ preventScroll: true }), 50);
+
+        if (isMobileSearch) {
+          // Поднимаем строку поиска к верху экрана, чтобы клавиатура не закрывала каналы
+          const scrollSearchToTop = () =>
+            searchWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(scrollSearchToTop, 60);
+          setTimeout(scrollSearchToTop, 400); // повтор, когда клавиатура уже выехала
+        }
       } else {
         closeSearch();
       }
@@ -1040,11 +1055,14 @@
       if (!screen.orientation) return;
       const isTouch = window.matchMedia('(pointer: coarse)').matches;
       if (player.isFullscreen() && isTouch) {
-        if (screen.orientation.lock) {
-          screen.orientation.lock('landscape').catch(() => {});
-        }
-      } else if (screen.orientation.unlock) {
-        screen.orientation.unlock();
+        lockLandscape();
+      } else {
+        // небольшая задержка: при смене канала событие может ненадолго «мигнуть»
+        setTimeout(() => {
+          if (!player.isFullscreen() && screen.orientation.unlock) {
+            screen.orientation.unlock();
+          }
+        }, 400);
       }
     });
 
@@ -1198,6 +1216,12 @@
 
     player.src({ src: ch.stream, type: 'application/x-mpegURL' });
     player.play().catch(() => {});
+
+    // Если плеер в полном экране на телефоне — удерживаем горизонтальный режим
+    if (player.isFullscreen() && window.matchMedia('(pointer: coarse)').matches) {
+      lockLandscape();
+      setTimeout(lockLandscape, 300);
+    }
   }
 
   // ============================================================
