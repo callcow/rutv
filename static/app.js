@@ -110,10 +110,17 @@
   let favorites = new Set(loadFavorites());
 
   function isFavorite(title) { return favorites.has(title); }
+
+  function updateFavCount() {
+    const el = document.getElementById('favCountLabel');
+    if (el) el.textContent = favorites.size ? `Любимые (${favorites.size})` : 'Любимые';
+  }
+  updateFavCount();
   function toggleFavorite(title) {
     if (favorites.has(title)) favorites.delete(title);
     else favorites.add(title);
     saveFavorites([...favorites]);
+    updateFavCount();saveFavorites([...favorites]);
   }
 
   // ============================================================
@@ -166,6 +173,8 @@
   let currentProgTitle = '';
   let currentEpgDay = 0;
   let epgExpanded = false;
+  let lastTapTime = 0;
+  let lastTapIndex = -1;
 
   // ============================================================
   // EPG: панель вкладок по дням
@@ -293,6 +302,20 @@
       item.addEventListener('click', (e) => {
         if (e.target.classList.contains('fav-star')) return;
 
+        // Двойной тап по карточке (телефон) — добавить/убрать из любимых
+        const tapIndex = parseInt(item.getAttribute('data-index'), 10);
+        const tapNow = Date.now();
+        const isMobileView = window.matchMedia('(max-width: 900px)').matches;
+        if (isMobileView && tapIndex === lastTapIndex && tapNow - lastTapTime < 350) {
+          lastTapTime = 0;
+          lastTapIndex = -1;
+          const favBtn = item.querySelector('.fav-star');
+          if (favBtn) favBtn.click();
+          return;
+        }
+        lastTapTime = tapNow;
+        lastTapIndex = tapIndex;
+
         // Если открыт поиск — закрываем его и сбрасываем запрос
         const wrapperEl = document.querySelector('.filters-wrapper');
         const searchWasActive = currentSearch.trim() !== '' ||
@@ -304,7 +327,17 @@
           if (wrapperEl) wrapperEl.classList.remove('search-open');
         }
 
-        selectChannel(parseInt(item.getAttribute('data-index')));
+          if (tapIndex === activeIndex) {
+          // Канал уже включён — поток не перезапускаем
+          if (searchWasActive) {
+            // поиск закрыт, список нужно перерисовать полным
+            renderChannels();
+            const activeCard = channelListEl.querySelector(`.channel-item[data-index="${tapIndex}"]`);
+            if (activeCard) activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        } else {
+          selectChannel(tapIndex);
+        }
 
         // После поиска возвращаем страницу к плееру
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -409,7 +442,14 @@
   }
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => setFilter(btn.getAttribute('data-filter')));
+    btn.addEventListener('click', () => {
+      // Закрываем поиск и сбрасываем запрос
+      if (searchWrapper) searchWrapper.classList.remove('search-open');
+      currentSearch = '';
+      if (channelSearch) channelSearch.value = '';
+
+      setFilter(btn.getAttribute('data-filter'));
+    });
   });
 
   // ============================================================
@@ -995,6 +1035,19 @@
       // Не делаем retry сразу, только если долго нет playing
     });
 
+  // Полный экран на телефоне/планшете — сразу горизонтальный режим
+    player.on('fullscreenchange', () => {
+      if (!screen.orientation) return;
+      const isTouch = window.matchMedia('(pointer: coarse)').matches;
+      if (player.isFullscreen() && isTouch) {
+        if (screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
+      } else if (screen.orientation.unlock) {
+        screen.orientation.unlock();
+      }
+    });
+
     player.on('loadedmetadata', () => {
       const levels = player.qualityLevels();
       qualityMenu.innerHTML = '';
@@ -1104,6 +1157,9 @@
     if (i >= CHANNELS.length) i = 0;
     if (i < 0 || i >= CHANNELS.length) return;
 
+    // При переходе на другой канал сворачиваем программу обратно
+    if (activeIndex !== i) epgExpanded = false;
+
     activeIndex = i;
     const ch = CHANNELS[i];
 
@@ -1185,6 +1241,43 @@
     }
   });
 
+    // ============================================================
+  // Скрываем передачу, которая не влезает целиком внизу панели
+  // ============================================================
+  const infoPanelEl = document.querySelector('.info-panel');
+  let clipRaf = 0;
+
+  function updateEpgClipping() {
+    if (!infoPanelEl || !epgListEl) return;
+    const items = epgListEl.querySelectorAll('.epg-item');
+    const overflowing = infoPanelEl.scrollHeight > infoPanelEl.clientHeight + 1;
+    const panelRect = infoPanelEl.getBoundingClientRect();
+    const visibleBottom = panelRect.top + infoPanelEl.clientTop + infoPanelEl.clientHeight;
+
+    items.forEach(item => {
+      if (!overflowing) {
+        item.classList.remove('epg-clipped');
+        return;
+      }
+      const r = item.getBoundingClientRect();
+      // Передача частично видна внизу — скрываем, пока не влезет целиком
+      item.classList.toggle('epg-clipped', r.bottom > visibleBottom + 1 && r.top < visibleBottom);
+    });
+  }
+
+  function scheduleEpgClipping() {
+    cancelAnimationFrame(clipRaf);
+    clipRaf = requestAnimationFrame(updateEpgClipping);
+  }
+
+  if (infoPanelEl && epgListEl) {
+    infoPanelEl.addEventListener('scroll', scheduleEpgClipping, { passive: true });
+    window.addEventListener('resize', scheduleEpgClipping);
+    new MutationObserver(scheduleEpgClipping).observe(epgListEl, { childList: true });
+    if (window.ResizeObserver) new ResizeObserver(scheduleEpgClipping).observe(infoPanelEl);
+    scheduleEpgClipping();
+  }
+
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && activeIndex >= 0 && CHANNELS[activeIndex]) {
       renderEPG(CHANNELS[activeIndex].title);
@@ -1221,13 +1314,23 @@
     }
   }
 
+    // Шаг прокрутки: показываем следующий «экран», последний видимый канал становится первым
+  function getCarouselStep() {
+    const item = channelListEl.querySelector('.channel-item');
+    if (!item) return channelListEl.clientWidth * 0.8;
+    const gap = parseFloat(getComputedStyle(channelListEl).columnGap) || 0;
+    const itemW = item.offsetWidth + gap;
+    const visibleCount = Math.floor(channelListEl.clientWidth / itemW);
+    return Math.max(1, visibleCount - 1) * itemW;
+  }
+
   if (scrollLeftBtn && scrollRightBtn && channelListEl) {
     scrollLeftBtn.addEventListener('click', () => {
-      channelListEl.scrollBy({ left: -300, behavior: 'smooth' });
+      channelListEl.scrollBy({ left: -getCarouselStep(), behavior: 'smooth' });
     });
 
     scrollRightBtn.addEventListener('click', () => {
-      channelListEl.scrollBy({ left: 300, behavior: 'smooth' });
+      channelListEl.scrollBy({ left: getCarouselStep(), behavior: 'smooth' });
     });
 
     channelListEl.addEventListener('scroll', updateScrollButtons);

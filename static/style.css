@@ -129,6 +129,21 @@ body {
   color: var(--text-main); letter-spacing: -0.5px;
 }
 
+.epg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;        /* список не сжимается, а скроллится внутри панели */
+  padding-bottom: 1.5rem; /* запас снизу, чтобы последняя передача не липла к краю */
+}
+
+.info-panel > * { flex-shrink: 0; }
+
+/* Передача, не влезающая целиком внизу панели, скрыта до прокрутки */
+.epg-item.epg-clipped {
+  opacity: 0;
+  pointer-events: none;
+}
 .epg-list { display: flex; flex-direction: column; gap: 0.5rem; }
 
 /* ФИЛЬТРЫ */
@@ -242,6 +257,9 @@ body {
   scroll-behavior: smooth; height: 100%; scrollbar-width: none; padding: 0.5rem;
 }
 .channel-carousel::-webkit-scrollbar { display: none; }
+
+/* Двойной тап по карточке не должен зумить страницу */
+.channel-item { touch-action: manipulation; }
 
 .channel-item {
   flex: 0 0 auto; width: 9.5rem; /* height: 100%; <- УБРАЛИ */
