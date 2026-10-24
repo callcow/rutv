@@ -172,6 +172,20 @@
   let playerNowEl = null;
   let currentProgTitle = '';
   let currentEpgDay = 0;
+  let currentProgStop = null;   // когда заканчивается текущая передача (Date)
+  let currentProgStopText = ''; // то же в виде «22:10»
+
+    function updatePlayerRemaining() {
+    const el = document.getElementById('cvRemaining');
+    if (!el) return;
+    if (!currentProgStop) { el.textContent = ''; return; }
+
+    const mins = Math.max(0, Math.ceil((currentProgStop - new Date()) / 60000));
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const left = h ? `${h} ч ${m} мин` : `${m} мин`;
+    el.textContent = `до конца передачи ${left}`;
+  }
   let epgExpanded = false;
   let lastTapTime = 0;
   let lastTapIndex = -1;
@@ -383,7 +397,12 @@
         // Обновляем остальные карточки и панель (не перерисовывая текущую до конца анимации)
         const titleToUpdate = ch.title;
         setTimeout(() => {
-          renderChannels();
+          // Если мы во вкладке "Любимые" и после удаления там не осталось каналов — переключаем на "Все"
+          if (currentFilter === 'favorites' && favorites.size === 0) {
+            setFilter('all');
+          } else {
+            renderChannels();
+          }
           updateFavToggle();
         }, isFavorite(titleToUpdate) ? 650 : 0);
       });
@@ -522,13 +541,18 @@
         added
       );
 
-      // Анимация пульса
+        // Анимация пульса
       favToggle.classList.remove('pulse');
       void favToggle.offsetWidth; // рестарт анимации
       favToggle.classList.add('pulse');
       setTimeout(() => favToggle.classList.remove('pulse'), 600);
 
-      renderChannels();
+      // Если мы во вкладке "Любимые" и после удаления там не осталось каналов — переключаем на "Все"
+      if (currentFilter === 'favorites' && favorites.size === 0) {
+        setFilter('all');
+      } else {
+        renderChannels();
+      }
       updateFavToggle();
     });
   }
@@ -542,7 +566,7 @@
     return isNaN(d.getTime()) ? null : d;
   }
 
-  function takeUpcoming(items, limit, dayOffset) {
+     function takeUpcoming(items, limit, dayOffset) {
     if (!Array.isArray(items) || items.length === 0) return [];
 
     const now = new Date();
@@ -624,7 +648,7 @@
     }
     
     // Забираем все доступные передачи на этот день (лимит 40, чтобы точно хватило)
-    const allVisible = takeUpcoming(channelEpg, 40, currentEpgDay);
+    const allVisible = takeUpcoming(channelEpg, 100, currentEpgDay);
 
     if (allVisible.length > 0) {
       // На мобильных (<= 900px) показываем 5, на ПК — 11
@@ -634,8 +658,6 @@
       let visible = allVisible;
       if (isMobile && !epgExpanded) {
         visible = allVisible.slice(0, 5);
-      } else if (!isMobile) {
-        visible = allVisible.slice(0, 11);
       }
 
       epgListEl.innerHTML = visible.map((item) => {
@@ -723,6 +745,8 @@
       nowPlayingBanner.style.display = 'block';
       currentProgTitle = '';
       syncPlayerOverlay();
+      currentProgStop = null;
+      updatePlayerRemaining();
       return;
     }
     const now = new Date();
@@ -746,6 +770,19 @@
 
     currentProgTitle = currentProg ? currentProg.title : '';
     syncPlayerOverlay();
+
+    // Конец передачи берём только если она идёт прямо сейчас
+    currentProgStop = null;
+    currentProgStopText = '';
+    if (currentProg) {
+      const s = parseEPGDate(currentProg.start_iso);
+      const e = parseEPGDate(currentProg.stop_iso);
+      if (s && e && now >= s && now < e) {
+        currentProgStop = e;
+        currentProgStopText = currentProg.stop;
+      }
+    }
+    updatePlayerRemaining();
   }
 
   // ============================================================
@@ -760,6 +797,7 @@
   let hls = null;
   let onHlsManifest = null;
   let prebufferCleanup = null; // сброс ожидания буфера при смене канала
+  let streamLoadedAt = 0;      // когда последний раз загружали поток
 
   const PREBUFFER_SECONDS = 8;     // сколько секунд видео накопить перед стартом
   const PREBUFFER_MAX_WAIT = 12000; // но ждать не дольше 12 секунд (мс)
@@ -777,6 +815,7 @@
     if (hls) { hls.destroy(); hls = null; }
 
     if (prebufferCleanup) { prebufferCleanup(); prebufferCleanup = null; }
+    streamLoadedAt = Date.now();
 
     const video = player.tech(true).el();
     video.autoplay = false; // стартуем сами, когда накопится буфер
@@ -918,6 +957,7 @@
       <div class="cv-live-badge">
         <span class="cv-live-dot"></span> LIVE
       </div>
+      <div class="cv-remaining" id="cvRemaining"></div>
 
       <div class="cv-spacer"></div>
       
@@ -948,6 +988,7 @@
     playerNowEl.innerHTML = `<span class="cv-now-text"></span>`;
     el.appendChild(playerNowEl);
     syncPlayerOverlay();
+    updatePlayerRemaining();
 
     const playSvg = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
     const pauseSvg = `<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
@@ -1112,7 +1153,21 @@
       qualityMenu.classList.remove('show');
     });
 
-    // --- Переподключение / ошибка ---
+      // После паузы возвращаемся в прямой эфир, а не продолжаем с места паузы
+    let pausedAt = 0;
+    player.on('pause', () => { pausedAt = Date.now(); });
+    player.on('play', () => {
+      // пауза была до загрузки текущего потока (смена канала) — не трогаем
+      if (!pausedAt || pausedAt < streamLoadedAt) { pausedAt = 0; return; }
+      const pausedFor = Date.now() - pausedAt;
+      pausedAt = 0;
+      if (pausedFor < 1500) return; // короткую паузу не трогаем
+      if (hls && hls.liveSyncPosition > 0) {
+        player.tech(true).el().currentTime = hls.liveSyncPosition;
+      }
+    });
+
+    // --- Переподключение / ошибка ---// --- Переподключение / ошибка ---
     player.on('playing', () => {
       retryAttempt = 0;
       if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
@@ -1314,8 +1369,14 @@
     if (i >= CHANNELS.length) i = 0;
     if (i < 0 || i >= CHANNELS.length) return;
 
-    // При переходе на другой канал сворачиваем программу обратно
-    if (activeIndex !== i) epgExpanded = false;
+   // При переходе на другой канал сворачиваем программу и возвращаем вкладку «Сегодня»
+    if (activeIndex !== i) {
+      epgExpanded = false;
+      currentEpgDay = 0;
+      document.querySelectorAll('.epg-tab').forEach(t => {
+        t.classList.toggle('active', t.getAttribute('data-day') === '0');
+      });
+    }
 
     activeIndex = i;
     const ch = CHANNELS[i];
@@ -1339,11 +1400,14 @@
 
     renderChannels();
 
+        renderChannels();
+
     const activeItem = channelListEl.querySelector(`.channel-item[data-index="${i}"]`);
     if (activeItem) {
-      activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      // Вычисляем позицию для прокрутки только внутри карусели, не трогая страницу
+      const scrollLeft = activeItem.offsetLeft - (channelListEl.clientWidth / 2) + (activeItem.offsetWidth / 2);
+      channelListEl.scrollTo({ left: scrollLeft, behavior: 'smooth' });
     }
-
     if (!player) {
       initCustomPlayer();
     }
@@ -1447,11 +1511,19 @@
     }
   });
 
+// Обновляем баннер и EPG раз в минуту
   setInterval(() => {
     if (activeIndex >= 0 && CHANNELS[activeIndex]) {
       updateNowPlayingBanner(CHANNELS[activeIndex].title);
     }
   }, 60000);
+
+  // Обновляем счётчик "осталось" каждую секунду
+  setInterval(() => {
+    if (currentProgStop) {
+      updatePlayerRemaining();
+    }
+  }, 1000);
 
   // ============================================================
   // КНОПКИ ПРОКРУТКИ КАРУСЕЛИ (ПК)
@@ -1500,10 +1572,51 @@
     window.addEventListener('resize', updateScrollButtons);
   }
 
-  // ============================================================
+      // ============================================================
   // Старт
   // ============================================================
-    renderChannels();
+  
+  // Логика показа подсказки про двойной тап (только 1 раз и только на телефоне)
+  const LS_TIP_SHOWN = 'tv_tip_doubletap_shown';
+  
+    function showMobileTipIfNeeded() {
+    // Проверяем, мобильное ли устройство
+    const isMobile = window.matchMedia('(max-width: 900px)').matches;
+    if (!isMobile) return;
+
+    // Проверяем, показывали ли уже
+    try {
+      if (localStorage.getItem(LS_TIP_SHOWN)) return;
+    } catch(e) {}
+
+    const tipEl = document.getElementById('mobileTip');
+    if (!tipEl) return;
+
+    // Показываем через 3 секунды после загрузки, чтобы интерфейс успел отрисоваться
+    setTimeout(() => {
+      tipEl.classList.add('show');
+      
+      // Автоматически скрываем через 10 секунд
+      const autoHide = setTimeout(hideTip, 10000);
+
+      function hideTip() {
+        // Плавно скрываем (добавляем класс анимации исчезновения)
+        tipEl.classList.add('toast-hide');
+        try { localStorage.setItem(LS_TIP_SHOWN, '1'); } catch(e) {}
+        clearTimeout(autoHide);
+
+        // Ждем окончания анимации и убираем класс show
+        setTimeout(() => {
+          tipEl.classList.remove('show', 'toast-hide');
+        }, 300);
+      }
+    }, 2000); // 3 секунды задержки
+  }
+
+  // Вызываем показ подсказки
+  showMobileTipIfNeeded();
+
+  renderChannels();
   if (CHANNELS.length > 0) {
     const saved = loadLastChannel();
     const startIdx = (saved >= 0 && saved < CHANNELS.length) ? saved : 0;

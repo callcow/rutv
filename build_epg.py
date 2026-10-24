@@ -116,7 +116,8 @@ def parse_epg(xml_data):
 
     now = datetime.now(MSK)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    horizon = now + timedelta(days=2)
+    # от начала сегодняшних суток: сегодня + ещё 3 дня (с запасом на случай, если сборка задержится)
+    horizon = today_start + timedelta(days=4)
 
     temp = {}
 

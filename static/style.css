@@ -292,15 +292,33 @@ body {
   position: relative;
 }
 
-.channel-item:hover .channel-card-inner { background: var(--bg-item-hover); box-shadow: 0 12px 24px rgba(0,0,0,0.5); }
+/* Неактивные логотипы чуть приглушены */
+.channel-logo img {
+  opacity: 0.65;
+  transition: opacity 0.3s ease;
+}
 
-/* Активный канал в карусели */
+/* При наведении карточка "оживает" */
+.channel-item:hover .channel-logo img {
+  opacity: 1;
+}
+
+.channel-item:hover .channel-card-inner { 
+  background: var(--bg-item-hover); 
+  box-shadow: 0 12px 24px rgba(0,0,0,0.5); 
+}
+
+/* Активный канал: яркая рамка и полная яркость логотипа */
 .channel-item.active .channel-card-inner { 
-  border-color: var(--accent); /* Яркая фиолетовая рамка */
-  background: rgba(99, 102, 241, 0.35); /* Чуть более плотный фон */
-  box-shadow: none;
-  transform: scale(1.05); /* Легкое увеличение карточки */
-  z-index: 2; /* Чтобы увеличенная карточка перекрывала соседние */
+  border-color: var(--accent); /* Возвращаем стандартную яркую рамку */
+  background: rgba(99, 102, 241, 0.2); /* Легкий фиолетовый оттенок фона */
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4); /* Обычная тень, без свечения */
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.channel-item.active .channel-logo img {
+  opacity: 1;
 }
 .channel-logo {
   width: 100%; height: 100%; display: flex; align-items: center;
@@ -583,6 +601,26 @@ body {
   animation: pulse-live 2s infinite;
 }
 
+/* До конца передачи / сколько осталось */
+.cv-remaining {
+  min-width: 0;
+  margin-left: 0.75rem;
+  font-family: 'Golos Text', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  /* На телефоне в портретном режиме панель тесная — надпись скрыта */
+  .cv-remaining { display: none; }
+  /* В полном экране (горизонтальный режим) показываем */
+  .video-js.vjs-fullscreen .cv-remaining { display: block; font-size: 0.7rem; margin-left: 0.5rem; }
+}
+
 @keyframes pulse-live {
   0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.7); }
   70% { box-shadow: 0 0 0 6px rgba(225, 29, 72, 0); }
@@ -694,13 +732,14 @@ body {
   .now-playing-banner .label { margin-right: 0.25rem; font-size: 0.9rem; }
   .now-playing-banner { font-size: 1.1rem; line-height: 1.4; }
   /* Вне полного экрана плашку прячем (программа показана под плеером) */
-  .video-js:not(.vjs-fullscreen) .cv-now-playing { display: none !important; }
+  .video-js:not(.vjs-fullscreen) 
+  .cv-now-playing { display: none !important; }
   /* В полном экране показываем, текст чуть компактнее, чем на ПК */
-  .video-js.vjs-fullscreen .cv-now-text { font-size: 1rem; }.cv-now-playing { display: none !important; }
+   .video-js.vjs-fullscreen .cv-now-text { font-size: 1rem; }
   .top-row { display: contents; }
   .video-column { order: 1; width: 100%; flex: none; margin-bottom: 0.25rem; }
   .player-wrapper { width: 100%; aspect-ratio: 16 / 9; flex: none; }
-  .now-playing-banner { order: 1.5; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .now-playing-banner { order: 1.5; margin-top: 0.75rem; margin-bottom: 0; }
   
     .filters-wrapper { order: 1.8; margin-bottom: 0.5rem; gap: 0.5rem; padding-bottom: 0.5rem; display: flex; align-items: center; }
   .filter-btn { font-size: 0.8rem; padding: 0.4rem 0.8rem; }
@@ -809,7 +848,7 @@ body {
   display: flex; /* Меняем на flex, чтобы она существовала в DOM */
   align-items: center;
   gap: 0.6rem;
-  padding: 0.75rem 1rem 1.5rem;
+  padding: 0.75rem 2rem 1.5rem;
   background: linear-gradient(to bottom, rgba(5, 9, 20, 0.85) 0%, transparent 100%);
   z-index: 85;
   pointer-events: none; /* тапы проходят сквозь плашку */
@@ -848,9 +887,27 @@ body {
   .video-column { flex: 1; min-height: auto; }
   .player-wrapper { flex: none; width: 100%; aspect-ratio: 16 / 9; }
 
-  /* панель не влияет на высоту ряда, а просто растягивается под плеер */
+   /* панель не влияет на высоту ряда, а просто растягивается под плеер */
   .info-panel { contain: size; }
 }
+
+/* Планшет в вертикальном положении: раскладка как на телефоне
+   (плеер на всю ширину, ниже категории и каналы, ниже программа) */
+@media (min-width: 901px) and (max-width: 1279px) {
+  .top-row { display: contents; }
+  .video-column { order: 1; width: 100%; flex: none; }
+  .player-wrapper { width: 100%; }
+  .filters-wrapper { order: 2; }
+  .carousel-wrapper { order: 3; }
+  .info-panel {
+    order: 4;
+    width: 100%;
+    flex: none;
+    contain: none;      /* высота по содержимому, а не по высоте плеера */
+    overflow-y: visible;
+  }
+}
+
 
 /* =========================================
    ПОИСК (КНОПКА-ЛУПА И ВЫЕЗЖАЮЩЕЕ ПОЛЕ)
@@ -1406,6 +1463,48 @@ body {
   fill: var(--text-muted);
 }
 
+/* Стили для подсказки (в стиле тостов) */
+.toast-tip {
+  display: none; /* Скрыто по умолчанию */
+  border-color: var(--accent) !important;
+  background: rgba(30, 41, 59, 0.95) !important; /* Чуть светлее обычных тостов */
+  pointer-events: auto;
+  animation: none; /* Отключаем стандартную анимацию появления */
+}
+
+.toast-tip.show {
+  display: flex; /* Показываем */
+  animation: toastIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.toast-tip .toast-text {
+  flex: 1;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  padding: 0.25rem; /* Отступы со всех сторон */
+  text-align: center; /* Текст по центру */
+}
+
+.toast-tip .toast-text b {
+  color: var(--accent-hover);
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: #fff;
+}
+
 @keyframes toastIn {
   0% {
     opacity: 0;
@@ -1482,6 +1581,79 @@ body {
 /* Скрываем PiP на мобильных устройствах */
 @media (max-width: 900px) {
   .cv-pip {
+    display: none !important;
+  }
+}
+
+/* =========================================
+   МОБИЛЬНАЯ ПОДСКАЗКА (ДВОЙНОЙ ТАП)
+   ========================================= */
+.mobile-tip {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(150%);
+  width: calc(100% - 2rem);
+  max-width: 400px;
+  background: rgba(30, 41, 59, 0.95); /* Темно-синий, как панели */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 9999;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mobile-tip.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-tip-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  animation: pulse-tip 2s infinite;
+}
+
+.mobile-tip-text {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.mobile-tip-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.mobile-tip-close:hover {
+  color: #fff;
+}
+
+@keyframes pulse-tip {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* Показываем подсказку ТОЛЬКО на мобильных (<= 900px) */
+@media (min-width: 901px) {
+  .mobile-tip {
     display: none !important;
   }
 }

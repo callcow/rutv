@@ -71,7 +71,7 @@ def main() -> int:
         return 0
 
     except Exception as e:
-        print(f"✗ Ошибка рендера: {e}", file=sys.stderr)
+        print(f"✗ Ошибка рендера: {e}", file=sys.stderr)   
         return 1
 
 if __name__ == "__main__":

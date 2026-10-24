@@ -172,8 +172,12 @@
   <!-- VHS (для HLS) -->
   <script src="https://unpkg.com/@videojs/http-streaming@3.10.0/dist/videojs-http-streaming.min.js"></script>
 
-   <!-- Контейнер для всплывающих уведомлений -->
-  <div id="toastContainer" class="toast-container"></div>
+     <!-- Подсказка про двойной тап (внутри контейнера тостов) -->
+  <div id="toastContainer" class="toast-container">
+    <div id="mobileTip" class="toast toast-tip">
+      <span class="toast-text"><b>Совет:</b> Дважды нажмите на карточку канала, чтобы добавить его в «Любимые».</span>
+    </div>
+  </div>
 
     <!-- hls.js (основной движок для HLS) -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
