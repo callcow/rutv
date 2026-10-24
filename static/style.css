@@ -144,6 +144,40 @@ body {
 }
 .filters-wrapper::-webkit-scrollbar { display: none; }
 
+/* Стрелки прокрутки категорий (ПК) */
+.filters-arrow {
+  position: sticky;
+  z-index: 5;
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, background 0.2s, border-color 0.2s;
+}
+.filters-arrow svg { width: 1.4rem; height: 1.4rem; fill: currentColor; }
+.filters-arrow.visible { opacity: 1; pointer-events: auto; }
+.filters-arrow:hover { background: var(--accent); border-color: var(--accent-hover); }
+
+/* Стрелки не занимают места в потоке (компенсируем ширину и gap 12px) */
+.filters-arrow-left  { left: 0;  margin-right: calc(-2.4rem - 12px); }
+.filters-arrow-right { right: 0; margin-left:  calc(-2.4rem - 12px); }
+
+/* На мобильных листаем пальцем */
+@media (max-width: 900px) {
+  .filters-arrow { display: none !important; }
+}
+
 .filter-btn {
   background: var(--bg-panel);
   border: 1px solid var(--border);
@@ -886,7 +920,9 @@ body {
 
 /* Раскрытое состояние на ПК */
 .filters-wrapper.search-open .search-input-wrapper {
-  width: 220px;
+  width: 260px;
+  min-width: 260px;
+  flex-shrink: 0;
   opacity: 1;
   pointer-events: auto;
   margin-right: 0.5rem;

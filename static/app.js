@@ -77,6 +77,19 @@
   const LS_LAST_CHANNEL = 'tv_last_channel';
   const LS_FAVORITES = 'tv_favorites';
   const LS_LAST_VOLUME = 'tv_volume';
+  const LS_QUALITY = 'tv_quality'; // 'auto' или число (высота в пикселях)
+
+  function loadQualityPref() {
+    try {
+      const raw = localStorage.getItem(LS_QUALITY);
+      if (!raw || raw === 'auto') return 'auto';
+      const h = parseInt(raw, 10);
+      return isNaN(h) ? 'auto' : h;
+    } catch(e) { return 'auto'; }
+  }
+  function saveQualityPref(v) {
+    try { localStorage.setItem(LS_QUALITY, String(v)); } catch(e) {}
+  }
 
   function loadLastChannel() {
     const v = parseInt(localStorage.getItem(LS_LAST_CHANNEL), 10);
@@ -279,7 +292,22 @@
 
       item.addEventListener('click', (e) => {
         if (e.target.classList.contains('fav-star')) return;
+
+        // Если открыт поиск — закрываем его и сбрасываем запрос
+        const wrapperEl = document.querySelector('.filters-wrapper');
+        const searchWasActive = currentSearch.trim() !== '' ||
+          (wrapperEl && wrapperEl.classList.contains('search-open'));
+        if (searchWasActive) {
+          currentSearch = '';
+          const searchInput = document.getElementById('channelSearch');
+          if (searchInput) searchInput.value = '';
+          if (wrapperEl) wrapperEl.classList.remove('search-open');
+        }
+
         selectChannel(parseInt(item.getAttribute('data-index')));
+
+        // После поиска возвращаем страницу к плееру
+          window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
       const star = item.querySelector('.fav-star');
@@ -351,6 +379,7 @@
       const isOpen = searchWrapper.classList.toggle('search-open');
       
       if (isOpen) {
+        searchWrapper.scrollTo({ left: 0, behavior: 'smooth' });
         setTimeout(() => channelSearch.focus(), 50);
       } else {
         closeSearch();
@@ -380,8 +409,40 @@
   }
 
   document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => setFilter(btn.getAttribute('data-filter')));
+      btn.addEventListener('click', () => setFilter(btn.getAttribute('data-filter')));
   });
+
+  // ============================================================
+  // Стрелки прокрутки категорий (ПК)
+  // ============================================================
+  const filtersArrowLeft = document.getElementById('filtersArrowLeft');
+  const filtersArrowRight = document.getElementById('filtersArrowRight');
+
+  function updateFiltersArrows() {
+    if (!searchWrapper || !filtersArrowLeft || !filtersArrowRight) return;
+    const maxScroll = searchWrapper.scrollWidth - searchWrapper.clientWidth;
+    filtersArrowLeft.classList.toggle('visible', searchWrapper.scrollLeft > 5);
+    filtersArrowRight.classList.toggle('visible', maxScroll > 5 && searchWrapper.scrollLeft < maxScroll - 5);
+  }
+
+  if (searchWrapper && filtersArrowLeft && filtersArrowRight) {
+    filtersArrowLeft.addEventListener('click', (e) => {
+      e.stopPropagation();
+      searchWrapper.scrollBy({ left: -250, behavior: 'smooth' });
+    });
+    filtersArrowRight.addEventListener('click', (e) => {
+      e.stopPropagation();
+      searchWrapper.scrollBy({ left: 250, behavior: 'smooth' });
+    });
+
+    searchWrapper.addEventListener('scroll', updateFiltersArrows);
+    // меняется ширина контента (открытие/закрытие поиска)
+    searchWrapper.addEventListener('transitionend', updateFiltersArrows);
+    window.addEventListener('resize', updateFiltersArrows);
+    window.addEventListener('load', updateFiltersArrows);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(updateFiltersArrows);
+    updateFiltersArrows();
+  }
 
   // ============================================================
   // Избранное (кнопка на панели канала)
@@ -957,6 +1018,7 @@
         item.onclick = (e) => {
           e.stopPropagation();
           setLevel(i);
+          saveQualityPref(level.height);
           qualityBtn.textContent = `${level.height}p`;
           updateQualityUI(`${level.height}p`);
           qualityMenu.classList.remove('show');
@@ -971,6 +1033,7 @@
       autoBtn.onclick = (e) => {
         e.stopPropagation();
         setLevel(-1);
+        saveQualityPref('auto');
         qualityBtn.textContent = 'Авто';
         updateQualityUI('Авто');
         qualityMenu.classList.remove('show');
@@ -978,8 +1041,35 @@
       };
       qualityMenu.appendChild(autoBtn);
 
-      if (hasLevels) {
-        updateQualityUI('Авто');
+            if (hasLevels) {
+        const pref = loadQualityPref();
+        if (pref === 'auto') {
+          setLevel(-1);
+          qualityBtn.textContent = 'Авто';
+          updateQualityUI('Авто');
+        } else {
+          // ищем уровень с ближайшей высотой (при равенстве берём более высокий)
+          let bestIdx = -1;
+          let bestDiff = Infinity;
+          for (let i = levels.length - 1; i >= 0; i--) {
+            if (!levels[i].height) continue;
+            const diff = Math.abs(levels[i].height - pref);
+            if (diff < bestDiff) {
+              bestDiff = diff;
+              bestIdx = i;
+            }
+          }
+          if (bestIdx >= 0) {
+            setLevel(bestIdx);
+            const label = `${levels[bestIdx].height}p`;
+            qualityBtn.textContent = label;
+            updateQualityUI(label);
+          } else {
+            setLevel(-1);
+            qualityBtn.textContent = 'Авто';
+            updateQualityUI('Авто');
+          }
+        }
       } else {
         qualityBtn.textContent = 'Авто';
         autoBtn.classList.add('active');
