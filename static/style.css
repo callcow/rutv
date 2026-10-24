@@ -20,7 +20,22 @@
   font-size: 20px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+/* Плеер: без подсветки касания, выделения и рамки фокуса */
+#video-container,
+#video-container * {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.video-js,
+.video-js:focus,
+.video-js video,
+.cv-click-overlay {
+  outline: none;
+}
 
 html { height: 100%; }
 
@@ -678,7 +693,10 @@ body {
 
   .now-playing-banner .label { margin-right: 0.25rem; font-size: 0.9rem; }
   .now-playing-banner { font-size: 1.1rem; line-height: 1.4; }
-  .cv-now-playing { display: none !important; }
+  /* Вне полного экрана плашку прячем (программа показана под плеером) */
+  .video-js:not(.vjs-fullscreen) .cv-now-playing { display: none !important; }
+  /* В полном экране показываем, текст чуть компактнее, чем на ПК */
+  .video-js.vjs-fullscreen .cv-now-text { font-size: 1rem; }.cv-now-playing { display: none !important; }
   .top-row { display: contents; }
   .video-column { order: 1; width: 100%; flex: none; margin-bottom: 0.25rem; }
   .player-wrapper { width: 100%; aspect-ratio: 16 / 9; flex: none; }

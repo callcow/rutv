@@ -756,6 +756,88 @@
   let offlineOverlay = null;
   let lastStreamUrl = '';
 
+  // hls.js, если браузер его поддерживает (на iPhone Safari остаётся встроенный HLS)
+  let hls = null;
+  let onHlsManifest = null;
+  let prebufferCleanup = null; // сброс ожидания буфера при смене канала
+
+  const PREBUFFER_SECONDS = 8;     // сколько секунд видео накопить перед стартом
+  const PREBUFFER_MAX_WAIT = 12000; // но ждать не дольше 12 секунд (мс)
+  const USE_HLSJS = typeof Hls !== 'undefined' && Hls.isSupported();
+
+  function loadStream(url) {
+    if (!player) return;
+
+    if (!USE_HLSJS) {
+      player.src({ src: url, type: 'application/x-mpegURL' });
+      player.play().catch(() => {});
+      return;
+    }
+
+    if (hls) { hls.destroy(); hls = null; }
+
+    if (prebufferCleanup) { prebufferCleanup(); prebufferCleanup = null; }
+
+    const video = player.tech(true).el();
+    video.autoplay = false; // стартуем сами, когда накопится буфер
+    hls = new Hls({
+      lowLatencyMode: false,
+      liveSyncDurationCount: 3,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+      backBufferLength: 30,
+      manifestLoadingMaxRetry: 4,
+      levelLoadingMaxRetry: 4,
+      fragLoadingMaxRetry: 6
+    });
+
+    const h = hls;
+      h.on(Hls.Events.MANIFEST_PARSED, () => {
+      if (onHlsManifest) onHlsManifest(h);
+
+      // Ждём, пока накопится запас видео, и только потом запускаем
+      let started = false;
+      let checkTimer = null;
+      let maxTimer = null;
+
+      const cleanup = () => {
+        clearInterval(checkTimer);
+        clearTimeout(maxTimer);
+      };
+      const startPlayback = () => {
+        if (started) return;
+        started = true;
+        cleanup();
+        player.play().catch(() => {});
+      };
+      const bufferedAhead = () => {
+        const b = video.buffered;
+        if (!b.length) return 0;
+        return b.end(b.length - 1) - video.currentTime;
+      };
+
+      checkTimer = setInterval(() => {
+        if (bufferedAhead() >= PREBUFFER_SECONDS) startPlayback();
+      }, 300);
+      maxTimer = setTimeout(startPlayback, PREBUFFER_MAX_WAIT);
+
+      prebufferCleanup = cleanup;
+    });
+    h.on(Hls.Events.ERROR, (evt, data) => {
+      if (!data.fatal) return;
+      if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        h.recoverMediaError();
+      } else {
+        scheduleRetry();
+      }
+    });
+
+    h.loadSource(url);
+    h.attachMedia(video);
+  }
+  
+
+
   function createOfflineOverlay() {
     if (offlineOverlay) return offlineOverlay;
     offlineOverlay = document.createElement('div');
@@ -768,8 +850,7 @@
       hideOfflineOverlay();
       retryAttempt = 0;
       if (player && lastStreamUrl) {
-        player.src({ src: lastStreamUrl, type: 'application/x-mpegURL' });
-        player.play().catch(() => {});
+        loadStream(lastStreamUrl);
       }
     });
     return offlineOverlay;
@@ -799,8 +880,7 @@
       retryTimer = null;
       if (player && lastStreamUrl) {
         try {
-          player.src({ src: lastStreamUrl, type: 'application/x-mpegURL' });
-          player.play().catch(() => {});
+          loadStream(lastStreamUrl);
         } catch(e) {}
       }
     }, delay);
@@ -1066,7 +1146,66 @@
       }
     });
 
+        // Меню качества, когда играет hls.js
+    onHlsManifest = (h) => {
+      qualityMenu.innerHTML = '';
+      const items = [];
+      (h.levels || []).forEach((lv, idx) => {
+        if (lv.height) items.push({ idx, height: lv.height });
+      });
+      items.sort((a, b) => b.height - a.height);
+
+      const updateUI = (text) => {
+        qualityMenu.querySelectorAll('.cv-quality-item').forEach(it => {
+          it.classList.toggle('active', it.textContent === text);
+        });
+      };
+      const choose = (idx, label, saveValue) => {
+        h.currentLevel = idx; // -1 = авто
+        qualityBtn.textContent = label;
+        updateUI(label);
+        if (saveValue !== undefined) saveQualityPref(saveValue);
+      };
+
+      items.forEach(({ idx, height }) => {
+        const item = document.createElement('div');
+        item.className = 'cv-quality-item';
+        item.textContent = `${height}p`;
+        item.onclick = (e) => {
+          e.stopPropagation();
+          choose(idx, `${height}p`, height);
+          qualityMenu.classList.remove('show');
+          showBar();
+        };
+        qualityMenu.appendChild(item);
+      });
+
+      const autoItem = document.createElement('div');
+      autoItem.className = 'cv-quality-item';
+      autoItem.textContent = 'Авто';
+      autoItem.onclick = (e) => {
+        e.stopPropagation();
+        choose(-1, 'Авто', 'auto');
+        qualityMenu.classList.remove('show');
+        showBar();
+      };
+      qualityMenu.appendChild(autoItem);
+
+      // Применяем сохранённое качество (или ближайшее)
+      const pref = loadQualityPref();
+      if (pref === 'auto' || items.length === 0) {
+        choose(-1, 'Авто');
+      } else {
+        let best = items[0];
+        items.forEach(it => {
+          if (Math.abs(it.height - pref) < Math.abs(best.height - pref)) best = it;
+        });
+        choose(best.idx, `${best.height}p`);
+      }
+    };
+
     player.on('loadedmetadata', () => {
+      if (USE_HLSJS) return; // меню строит hls.js
       const levels = player.qualityLevels();
       qualityMenu.innerHTML = '';
       let hasLevels = false;
@@ -1214,8 +1353,7 @@
     if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
     hideOfflineOverlay();
 
-    player.src({ src: ch.stream, type: 'application/x-mpegURL' });
-    player.play().catch(() => {});
+    loadStream(ch.stream);
 
     // Если плеер в полном экране на телефоне — удерживаем горизонтальный режим
     if (player.isFullscreen() && window.matchMedia('(pointer: coarse)').matches) {
@@ -1365,7 +1503,7 @@
   // ============================================================
   // Старт
   // ============================================================
-  renderChannels();
+    renderChannels();
   if (CHANNELS.length > 0) {
     const saved = loadLastChannel();
     const startIdx = (saved >= 0 && saved < CHANNELS.length) ? saved : 0;
