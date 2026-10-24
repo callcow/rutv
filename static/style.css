@@ -144,7 +144,6 @@ body {
   opacity: 0;
   pointer-events: none;
 }
-.epg-list { display: flex; flex-direction: column; gap: 0.5rem; }
 
 /* ФИЛЬТРЫ */
 .filters-wrapper {
@@ -433,7 +432,15 @@ body {
 
 /* Невидимый слой для кликов */
 .cv-click-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 90;
+  cursor: pointer;
   touch-action: pan-y; /* горизонтальные свайпы отдаём JS, вертикальная прокрутка страницы работает */
+}
 
 /* Кастомный контрол-бар */
 .custom-video-bar {

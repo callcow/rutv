@@ -120,7 +120,7 @@
     if (favorites.has(title)) favorites.delete(title);
     else favorites.add(title);
     saveFavorites([...favorites]);
-    updateFavCount();saveFavorites([...favorites]);
+    updateFavCount();
   }
 
   // ============================================================
