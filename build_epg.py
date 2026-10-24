@@ -116,7 +116,7 @@ def parse_epg(xml_data):
 
     now = datetime.now(MSK)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    horizon = now + timedelta(days=3)
+    horizon = now + timedelta(days=2)
 
     temp = {}
 
