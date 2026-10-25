@@ -315,6 +315,7 @@
   // ============================================================
   let fsChannelsEl = null;
   let fsLastActive = -2;
+  let fsLastKey = '';
 
   function visibleChannelIndexes() {
     const res = [];
@@ -334,7 +335,27 @@
     if (!fsChannelsEl) return;
     const prevScroll = fsChannelsEl.scrollLeft;
 
-    fsChannelsEl.innerHTML = visibleChannelIndexes().map(idx => {
+    const fsIdxs = visibleChannelIndexes();
+    const fsKey = fsIdxs.join(',');
+    if (fsKey === fsLastKey && fsChannelsEl.children.length) {
+      // набор каналов не изменился: не пересоздаём ленту, меняем выбранный и плавно прокручиваем к нему
+      fsChannelsEl.querySelectorAll('.cv-ch-card').forEach(c => {
+        c.classList.toggle('active', parseInt(c.getAttribute('data-index'), 10) === activeIndex);
+      });
+      if (fsLastActive !== activeIndex && fsChannelsEl.offsetParent !== null) {
+        const a = fsChannelsEl.querySelector('.cv-ch-card.active');
+        if (a) {
+          const t = a.offsetLeft - fsChannelsEl.clientWidth / 2 + a.offsetWidth / 2;
+          if (fsLastActive === -2) fsChannelsEl.scrollLeft = t; // первое появление: сразу на месте
+          else fsChannelsEl.scrollTo({ left: t, behavior: 'smooth' });
+        }
+        fsLastActive = activeIndex;
+      }
+      return;
+    }
+    fsLastKey = fsKey;
+
+    fsChannelsEl.innerHTML = fsIdxs.map(idx => {
       const ch = CHANNELS[idx];
       const logoFile = getLogoFile(ch.title);
       const logo = logoFile
@@ -365,6 +386,7 @@
   } 
 
   function renderChannels() {
+    const prevCarouselScroll = channelListEl.scrollLeft;
     channelListEl.innerHTML = '';
     const q = currentSearch.trim().toLowerCase();
 
@@ -527,6 +549,11 @@
     });
 
     renderFsChannels();
+
+    // Возвращаем позицию прокрутки: иначе после перерисовки карусель прыгает в начало
+    channelListEl.style.scrollBehavior = 'auto';
+    channelListEl.scrollLeft = prevCarouselScroll;
+    channelListEl.style.scrollBehavior = '';
 
     // Обновляем видимость кнопок прокрутки после перерисовки
     if (typeof updateScrollButtons === 'function') {
@@ -1239,7 +1266,10 @@
     fsChannelsEl.addEventListener('touchstart', showBar, { passive: true });
     fsChannelsEl.addEventListener('scroll', showBar, { passive: true });
     player.on('fullscreenchange', () => {
-      if (player.isFullscreen()) requestAnimationFrame(renderFsChannels);
+      if (player.isFullscreen()) {
+        fsLastActive = -2; // лента только появилась: ставим выбранный канал по центру без анимации
+        requestAnimationFrame(renderFsChannels);
+      }
     });
 
     let barWasVisibleOnDown = false;
