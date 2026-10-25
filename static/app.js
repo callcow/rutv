@@ -60,6 +60,24 @@
     "Муз-ТВ": "music",
   };
 
+    // Каналы, которые должны быть ещё и в других категориях
+  // (в объекте выше повторяющийся ключ перезаписывается, поэтому вторая категория здесь)
+  const EXTRA_CATEGORIES = {
+    "Матч ТВ": ["federal"], "Россия К": ["federal"], "Карусель": ["federal"],
+    "Пятница": ["federal"], "Россия 24": ["federal"], "Муз-ТВ": ["federal"],
+  };
+
+  function channelInCategory(title, category) {
+    const t = title.trim().toLowerCase();
+    const find = (map) => {
+      const k = Object.keys(map).find(x => x.toLowerCase() === t);
+      return k ? map[k] : null;
+    };
+    if (find(CHANNEL_CATEGORIES) === category) return true;
+    const extra = find(EXTRA_CATEGORIES);
+    return !!(extra && extra.includes(category));
+  }
+
   function getChannelCategory(title) {
     const key = Object.keys(CHANNEL_CATEGORIES).find(k => k.toLowerCase() === title.trim().toLowerCase());
     return key ? CHANNEL_CATEGORIES[key] : "all";
@@ -150,7 +168,7 @@
     
     toast.innerHTML = `
       <span class="toast-icon">${isFavoriteAdd ? HEART_SVG : HEART_OUTLINE_SVG}</span>
-      <span>${message}</span>
+      <span>${esc(message)}</span>
     `;
 
     toastContainer.appendChild(toast);
@@ -190,10 +208,18 @@
   let lastTapTime = 0;
   let lastTapIndex = -1;
 
+  let landscapeLocked = false;
+
   function lockLandscape() {
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock('landscape').catch(() => {});
-    }
+    if (!screen.orientation || !screen.orientation.lock) return;
+    if (landscapeLocked) return; // уже заблокировано — повторный вызов вызывает мигание в Firefox
+    landscapeLocked = true;
+    screen.orientation.lock('landscape').catch(() => { landscapeLocked = false; });
+  }
+
+  function unlockLandscape() {
+    landscapeLocked = false;
+    if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
   }
 
   // ============================================================
@@ -264,7 +290,7 @@
 
       if (currentFilter === 'favorites') {
         if (!isFavorite(ch.title)) return;
-      } else if (currentFilter !== 'all' && category !== currentFilter) {
+      } else if (currentFilter !== 'all' && !channelInCategory(ch.title, currentFilter)) {
         return;
       }
 
@@ -276,7 +302,7 @@
 
       const hdBadge = ch.quality === 'HD' ? '<span class="quality-badge hd">HD</span>' : '';
       const logoFile = getLogoFile(ch.title);
-      const logoHtml = logoFile ? `<img src="static/logos/${logoFile}" alt="${ch.title}" loading="lazy">` : initials(ch.title);
+      const logoHtml = logoFile ? `<img src="static/logos/${logoFile}" alt="${esc(ch.title)}" loading="lazy">` : esc(initials(ch.title));
       const favActive = isFavorite(ch.title);
       const heartClass = favActive ? 'fav-star active' : 'fav-star';
 
@@ -299,7 +325,7 @@
           if (now >= start && now < stop) { currentProg = itemProg; break; }
         }
         if (currentProg) {
-          currentProgTime = currentProg.start;
+          currentProgTime = fmtLocalTime(currentProg.start_iso, currentProg.start);
           currentProgTitle = currentProg.title;
         }
       }
@@ -311,17 +337,17 @@
         <div class="channel-card-inner">
           ${hdBadge}
           <div class="channel-logo">${logoHtml}</div>
-          <button class="${heartClass}" data-fav="${ch.title}" title="В избранное" aria-label="В избранное">
+          <button class="${heartClass}" data-fav="${esc(ch.title)}" title="В избранное" aria-label="В избранное">
             <svg viewBox="0 0 24 24" class="heart-icon">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           </button>
         </div>
         <div class="channel-name-wrapper">
-          <div class="channel-name" title="${ch.title}">${ch.title}</div>
+          <div class="channel-name" title="${esc(ch.title)}">${esc(ch.title)}</div>
         </div>
-        <div class="channel-epg-now" title="${currentProgText}">
-          ${currentProgTime ? `<span class="epg-card-time">${currentProgTime}</span> <span class="epg-card-title">${currentProgTitle}</span>` : ''}
+        <div class="channel-epg-now" title="${esc(currentProgText)}">
+          ${currentProgTime ? `<span class="epg-card-time">${esc(currentProgTime)}</span> <span class="epg-card-title">${esc(currentProgTitle)}</span>` : ''}
         </div>
       `;
 
@@ -566,6 +592,20 @@
   // ============================================================
   // EPG логика
   // ============================================================
+    // Время передачи в часовом поясе зрителя (из ISO-даты); fallback — исходная строка «ЧЧ:ММ» (МСК)
+  function fmtLocalTime(iso, fallback) {
+    const d = parseEPGDate(iso);
+    if (!d) return fallback || '';
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  }
+
+  // Экранирование текста перед вставкой в HTML
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
   function parseEPGDate(iso) {
     if (!iso) return null;
     const d = new Date(iso);
@@ -703,10 +743,10 @@
         const realIdx = allVisible.indexOf(item);
         return `
         <div class="epg-item" data-start="${item.start_iso}" data-stop="${item.stop_iso}" data-idx="${realIdx}">
-          <span class="epg-time">${item.start}</span>
+          <span class="epg-time">${fmtLocalTime(item.start_iso, item.start)}</span>
           <span class="epg-name">
             <div class="epg-info-row">
-              <span class="epg-title-text">${item.title}</span>
+              <span class="epg-title-text">${esc(item.title)}</span>
             </div>
           </span>
         </div>
@@ -763,7 +803,8 @@
       });
     }
 
-    descOverlay.querySelector('.desc-time').textContent = `${item.start}–${item.stop || ''}`;
+    descOverlay.querySelector('.desc-time').textContent =
+      `${fmtLocalTime(item.start_iso, item.start)}–${fmtLocalTime(item.stop_iso, item.stop)}`;
     descOverlay.querySelector('.desc-title').textContent = item.title;
     descOverlay.querySelector('.desc-text').textContent = item.desc || 'Описание отсутствует.';
     descOverlay.classList.add('show');
@@ -804,7 +845,7 @@
       }
     }
     const progTitle = currentProg ? currentProg.title : 'Программа не найдена';
-    nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> ${progTitle}`;
+    nowPlayingText.innerHTML = `<span class="label">Сейчас идёт:</span> ${esc(progTitle)}`;
     nowPlayingBanner.style.display = 'block';
 
     currentProgTitle = currentProg ? currentProg.title : '';
@@ -818,7 +859,7 @@
       const e = parseEPGDate(currentProg.stop_iso);
       if (s && e && now >= s && now < e) {
         currentProgStop = e;
-        currentProgStopText = currentProg.stop;
+        currentProgStopText = fmtLocalTime(currentProg.stop_iso, currentProg.stop);
       }
     }
     updatePlayerRemaining();
@@ -976,6 +1017,13 @@
     });
 
     const el = player.el();
+
+    // Убираем родные контролы браузера (Firefox рисует свой значок «плей»)
+    const nativeVideo = player.tech(true) && player.tech(true).el();
+    if (nativeVideo) {
+      nativeVideo.controls = false;
+      nativeVideo.removeAttribute('controls');
+    }
 
     const clickOverlay = document.createElement('div');
     clickOverlay.className = 'cv-click-overlay';
@@ -1271,9 +1319,7 @@
       } else {
         // небольшая задержка: при смене канала событие может ненадолго «мигнуть»
         setTimeout(() => {
-          if (!player.isFullscreen() && screen.orientation.unlock) {
-            screen.orientation.unlock();
-          }
+        if (!player.isFullscreen()) unlockLandscape();
         }, 400);
       }
     });
@@ -1463,7 +1509,7 @@
     if (hadActiveChannel && currentFilter !== 'all') {
       const inCurrentFilter = currentFilter === 'favorites'
         ? isFavorite(ch.title)
-        : getChannelCategory(ch.title) === currentFilter;
+        : channelInCategory(ch.title, currentFilter);
       if (!inCurrentFilter) setFilter('all');
     }
 
@@ -1471,7 +1517,7 @@
 
     const logoFile = getLogoFile(ch.title);
     if (logoFile) {
-      infoLogo.innerHTML = `<img src="static/logos/${logoFile}" alt="${ch.title}">`;
+      infoLogo.innerHTML = `<img src="static/logos/${logoFile}" alt="${esc(ch.title)}">`;
     } else {
       infoLogo.textContent = initials(ch.title);
     }
@@ -1507,8 +1553,7 @@
 
     // Если плеер в полном экране на телефоне — удерживаем горизонтальный режим
     if (player.isFullscreen() && window.matchMedia('(pointer: coarse)').matches) {
-      lockLandscape();
-      setTimeout(lockLandscape, 300);
+      lockLandscape(); // ничего не делает, если уже заблокировано
     }
   }
 
@@ -1518,6 +1563,7 @@
   document.addEventListener('keydown', (e) => {
     // Игнорируем ввод в поле поиска
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
 
     if (e.key === 'ArrowRight') { e.preventDefault(); selectChannel(activeIndex + 1); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); selectChannel(activeIndex - 1); }
