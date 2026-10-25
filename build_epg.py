@@ -209,7 +209,7 @@ def main():
         return
 
     OUTPUT_FILE.write_text(
-        json.dumps(schedule, ensure_ascii=False, indent=2),
+        json.dumps(schedule, ensure_ascii=False, separators=(',', ':')),
         encoding="utf-8",
     )
     total = sum(len(v) for v in schedule.values())

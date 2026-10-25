@@ -1900,10 +1900,59 @@
   // Вызываем показ подсказки
   showMobileTipIfNeeded();
 
-  renderChannels();
-  if (CHANNELS.length > 0) {
-    const saved = loadLastChannel();
-    const startIdx = (saved >= 0 && saved < CHANNELS.length) ? saved : 0;
-    // Небольшая задержка, чтобы DOM успел отрисоваться
-    setTimeout(() => selectChannel(startIdx), 0);
+   // ============================================================
+  // Программа передач: загрузка отдельным файлом
+  // ============================================================
+  let lastEpgText = '';
+  let lastEpgLoad = 0;
+
+  // true, если загружены новые данные
+  async function loadEpg() {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const r = await fetch('epg_data.json', { cache: 'no-cache', signal: ctrl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const text = await r.text();
+      lastEpgLoad = Date.now();
+      if (text === lastEpgText) return false; // ничего не изменилось
+      const data = JSON.parse(text);
+      if (!data || typeof data !== 'object') throw new Error('неверный формат');
+      EPG_DATA = data;
+      lastEpgText = text;
+      return true;
+    } catch (e) {
+      console.warn('Программа передач не загружена:', e);
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  async function refreshEpg() {
+    if (await loadEpg()) {
+      renderChannels();
+      if (activeIndex >= 0 && CHANNELS[activeIndex]) {
+        renderEPG(CHANNELS[activeIndex].title);
+        updateNowPlayingBanner(CHANNELS[activeIndex].title);
+      }
+    }
+  }
+
+  (async function start() {
+    // Ждём программу (не дольше 8 с), чтобы карточки сразу показали текущие передачи
+    await loadEpg();
+
+    renderChannels();
+    if (CHANNELS.length > 0) {
+      const saved = loadLastChannel();
+      const startIdx = (saved >= 0 && saved < CHANNELS.length) ? saved : 0;
+      selectChannel(startIdx);
+    }
+
+    // Обновляем программу раз в 30 минут и при возвращении на вкладку
+    setInterval(refreshEpg, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && Date.now() - lastEpgLoad > 10 * 60 * 1000) refreshEpg();
+    });
+  })();

@@ -53,8 +53,7 @@ def main() -> int:
         epg_json = "{}"
         epg_path = Path("epg_data.json")
         if epg_path.exists():
-            epg_json = epg_path.read_text(encoding="utf-8")
-            print(f"✓ Загружен EPG ({len(epg_json):,} байт)")
+            print(f"✓ Найден epg_data.json ({epg_path.stat().st_size:,} байт), страница подгружает его отдельно")
         else:
             print("⚠ Файл epg_data.json не найден. Программа передач будет пустой.")
         
