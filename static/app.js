@@ -1225,6 +1225,11 @@
       qualityMenu.classList.remove('show');
     });
 
+    // Панель скрылась — закрываем и меню качества, чтобы оно не вернулось вместе с ней
+    new MutationObserver(() => {
+      if (!isBarShown()) qualityMenu.classList.remove('show');
+    }).observe(el, { attributes: true, attributeFilter: ['class'] });
+
       // После паузы возвращаемся в прямой эфир, а не продолжаем с места паузы
     let pausedAt = 0;
     player.on('pause', () => { pausedAt = Date.now(); });
