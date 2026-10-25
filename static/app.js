@@ -26,7 +26,11 @@
     "ТНТ": "tnt.png", "Муз-ТВ": "muztv.png", "Суббота": "subbota.png",
     "Че": "che.png", "ЦТВ": "ctv.png", "Известия": "iz.png",
     "Кино ТВ": "kinotv.png", "Ю": "u.png", "Телеканал 78": "78.png",
-    "КиноСезон": "kinosezon.png", "Солнце": "solnce.png", "СТС Love": "stslove.png"
+    "КиноСезон": "kinosezon.png", "Солнце": "solnce.png", "СТС Love": "stslove.png",
+    "РБК": "rbc.png","viju TV1000": "viju_tv1000.png","viju TV1000 Action": "viju_action.png",
+    "viju TV1000 Novella": "viju_novella.png","viju TV1000 Romantica": "viju_romantica.png",
+    "viju History": "viju_history.png","viju Explore": "viju_explore.png",
+    "viju Nature": "viju_nature.png","Da Vinci": "davinci.png"
   };
 
   const CHANNEL_CATEGORIES = {
@@ -39,13 +43,21 @@
     "Звезда": "federal", "Мир": "federal", "ТНТ": "federal", "Муз-ТВ": "federal",
     
     // Спортивные
-    "Матч ТВ": "sport", // (он уже федеральный, но можно отнести и к спорту, если логика позволяет)
+    "Матч ТВ": "sport",
     
     // Кино и сериалы
     "Кино ТВ": "cinema", "КиноСезон": "cinema",
+    "viju TV1000": "cinema",
+    "viju TV1000 Action": "cinema",
+    "viju TV1000 Novella": "cinema",
+    "viju TV1000 Romantica": "cinema",
     
     // Познавательные
-    "Россия К": "edu", // (Культура)
+    "Россия К": "edu",
+    "viju History": "edu",
+    "viju Explore": "edu",
+    "viju Nature": "edu",
+    "Da Vinci": "edu",
     
     // Детские
     "Карусель": "kids", "Солнце": "kids",
@@ -54,7 +66,7 @@
     "Пятница": "entertainment", "Суббота": "entertainment", "Че": "entertainment", "СТС Love": "entertainment", "Ю": "entertainment",
     
     // Новостные
-    "Россия 24": "news", "Известия": "news",
+    "Россия 24": "news", "Известия": "news", "РБК": "news",
     
     // Музыкальные
     "Муз-ТВ": "music",

@@ -48,6 +48,16 @@ CHANNEL_MAPPING = {
     "КиноСезон":     "3118",
     "Солнце":        "3239",
     "СТС Love":      "1800",
+    "РБК":                 "326",    
+    "viju TV1000":         "288",    
+    "viju TV1000 Action":  "300047",    
+    "viju TV1000 Novella": "",    
+    "viju TV1000 Romantica":"",   
+    "viju History":        "325",    
+    "viju Explore":        "324",    
+    "viju Nature":         "1009",    
+    "Da Vinci":            "955",    
+    
 }
 
 
