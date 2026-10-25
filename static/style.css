@@ -441,6 +441,9 @@ body {
   border: 1px solid rgba(99, 102, 241, 0.5);
 }
 
+/* Прошедшие передачи — приглушены */
+.epg-item.epg-past { opacity: 0.5; }
+
 .epg-item.now-playing .epg-time { color: #ffffff; font-weight: 700; }
 .epg-item.now-playing .epg-title-text { font-weight: 600; color: #ffffff; }
 
@@ -704,6 +707,40 @@ body {
   z-index: 95;
 }
 
+/* Центральная кнопка видна, пока видна панель управления (или пауза) */
+.vjs-custom-bar-active.cv-visible .cv-center-btn,
+.vjs-custom-bar-active.vjs-paused .cv-center-btn {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Пока идёт загрузка, вместо кнопки показываем индикатор */
+.cv-loading .cv-center-btn { opacity: 0 !important; }
+
+.cv-spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3.2rem;
+  height: 3.2rem;
+  margin: -1.6rem 0 0 -1.6rem;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: cv-spin 0.8s linear infinite;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 96;
+  transition: opacity 0.2s;
+}
+.cv-loading .cv-spinner { opacity: 1; }
+
+@keyframes cv-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .cv-spinner { width: 2.4rem; height: 2.4rem; margin: -1.2rem 0 0 -1.2rem; }
+}
+
 .cv-center-btn.show {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
@@ -732,8 +769,7 @@ body {
   .now-playing-banner .label { margin-right: 0.25rem; font-size: 0.9rem; }
   .now-playing-banner { font-size: 1.1rem; line-height: 1.4; }
   /* Вне полного экрана плашку прячем (программа показана под плеером) */
-  .video-js:not(.vjs-fullscreen) 
-  .cv-now-playing { display: none !important; }
+  .video-js:not(.vjs-fullscreen) .cv-now-playing { display: none !important; }
   /* В полном экране показываем, текст чуть компактнее, чем на ПК */
    .video-js.vjs-fullscreen .cv-now-text { font-size: 1rem; }
   .top-row { display: contents; }
@@ -889,6 +925,18 @@ body {
 
    /* панель не влияет на высоту ряда, а просто растягивается под плеер */
   .info-panel { contain: size; }
+}
+
+/* ПК (от 1280px): шапка панели неподвижна, прокручивается только список передач */
+@media (min-width: 1280px) {
+  .info-panel { overflow: hidden; }
+  .epg-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+  .epg-list::-webkit-scrollbar-track { margin: 4px 0; }
 }
 
 /* Планшет в вертикальном положении: раскладка как на телефоне

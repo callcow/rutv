@@ -247,6 +247,12 @@
       btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
     });
     renderChannels();
+
+    // Если включённый канал есть на этой вкладке — показываем его в карусели
+    const activeCard = channelListEl.querySelector('.channel-item.active');
+    if (activeCard) {
+      activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
   }
 
   function renderChannels() {
@@ -581,12 +587,14 @@
       return (s < targetDayEnd) && (e > targetDayStart);
     });
 
-    // 2. Если это "Сегодня", отсекаем то, что уже прошло
+    // 2. Если это "Сегодня", оставляем 4 последние прошедшие передачи, текущую и все следующие
     if (dayOffset === 0) {
-      filtered = filtered.filter(it => {
-        const e = parseEPGDate(it.stop_iso);
-        return e > now;
-      });
+      const firstCurrent = filtered.findIndex(it => parseEPGDate(it.stop_iso) > now);
+      if (firstCurrent === -1) {
+        filtered = filtered.slice(-4);
+      } else {
+        filtered = filtered.slice(Math.max(0, firstCurrent - 4));
+      }
     }
 
     return filtered.slice(0, limit);
@@ -604,6 +612,7 @@
 
       if (now >= start && now < stop) {
         item.classList.add('now-playing');
+        item.classList.remove('epg-past');
         const timeEl = item.querySelector('.epg-time');
         if (timeEl && !timeEl.querySelector('.live-badge')) {
           const badge = document.createElement('span');
@@ -618,6 +627,7 @@
         item.style.background = `linear-gradient(90deg, rgba(99, 102, 241, 0.35) ${percent}%, rgba(99, 102, 241, 0.05) ${percent}%)`;
       } else {
         item.classList.remove('now-playing');
+        item.classList.toggle('epg-past', now >= stop);
         const badge = item.querySelector('.live-badge');
         if (badge) badge.remove();
         item.style.background = '';
@@ -634,6 +644,28 @@
       if (activeIndex >= 0 && CHANNELS[activeIndex]) {
         renderEPG(CHANNELS[activeIndex].title);
       }
+    });
+  }
+
+    // Прокручиваем панель программы так, чтобы текущая передача была по центру
+  // (к концу дня она сама опускается ниже: дальше низа списка прокрутить нельзя)
+  function scrollEpgToCurrent() {
+        if (!epgListEl) return;
+
+    // Список прокручивается сам только в ПК-раскладке; в других случаях страницу не трогаем
+    const scrollable = getComputedStyle(epgListEl).overflowY !== 'visible' &&
+                       epgListEl.scrollHeight > epgListEl.clientHeight + 1;
+    if (!scrollable) return;
+
+    requestAnimationFrame(() => {
+      const current = epgListEl.querySelector('.epg-item.now-playing');
+      if (!current) { epgListEl.scrollTop = 0; return; }
+
+      const lr = epgListEl.getBoundingClientRect();
+      const ir = current.getBoundingClientRect();
+      const target = epgListEl.scrollTop + (ir.top - lr.top)
+                     - (epgListEl.clientHeight / 2) + (ir.height / 2);
+      epgListEl.scrollTop = Math.max(0, target);
     });
   }
 
@@ -655,9 +687,15 @@
       const isMobile = window.innerWidth <= 900;
       const initialLimit = isMobile ? 5 : 11;
       
+      const nowTs = new Date();
+      const pastCount = currentEpgDay === 0
+        ? allVisible.filter(it => parseEPGDate(it.stop_iso) <= nowTs).length
+        : 0;
+      const collapsed = allVisible.slice(pastCount, pastCount + 5);
+
       let visible = allVisible;
       if (isMobile && !epgExpanded) {
-        visible = allVisible.slice(0, 5);
+        visible = collapsed.length ? collapsed : allVisible.slice(-5);
       }
 
       epgListEl.innerHTML = visible.map((item) => {
@@ -680,10 +718,11 @@
       });
 
       updateCurrentEPGHighlight();
+      scrollEpgToCurrent();
 
       // Показываем/скрываем кнопку "Показать ещё / Скрыть"
       if (epgShowMoreBtn) {
-        if (isMobile && allVisible.length > 5) {
+        if (isMobile && allVisible.length > collapsed.length) {
           epgShowMoreBtn.style.display = 'block';
           epgShowMoreBtn.textContent = epgExpanded ? 'Скрыть' : 'Показать ещё';
         } else {
@@ -805,6 +844,7 @@
 
   function loadStream(url) {
     if (!player) return;
+    player.el().classList.add('cv-loading'); // индикатор до старта воспроизведения
 
     if (!USE_HLSJS) {
       player.src({ src: url, type: 'application/x-mpegURL' });
@@ -847,7 +887,7 @@
         if (started) return;
         started = true;
         cleanup();
-        player.play().catch(() => {});
+        player.play().catch(() => player.el().classList.remove('cv-loading'));
       };
       const bufferedAhead = () => {
         const b = video.buffered;
@@ -900,6 +940,7 @@
     const el = player.el();
     const ov = createOfflineOverlay();
     if (!ov.parentNode) el.appendChild(ov);
+    el.classList.remove('cv-loading');
     ov.style.display = 'flex';
   }
   function hideOfflineOverlay() {
@@ -983,6 +1024,13 @@
     centerBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
     el.appendChild(centerBtn);
 
+    // Индикатор загрузки: виден, пока канал не начал воспроизводиться или буферизуется
+    const spinner = document.createElement('div');
+    spinner.className = 'cv-spinner';
+    el.appendChild(spinner);
+    player.on('waiting', () => el.classList.add('cv-loading'));
+    player.on('playing', () => el.classList.remove('cv-loading'));
+
     playerNowEl = document.createElement('div');
     playerNowEl.className = 'cv-now-playing';
     playerNowEl.innerHTML = `<span class="cv-now-text"></span>`;
@@ -1036,12 +1084,20 @@
       }
     };
 
+    const hideBar = () => {
+      isBarVisible = false;
+      clearTimeout(barHideTimeout);
+      el.classList.remove('cv-visible');
+    };
+
     const isBarShown = () =>
       el.classList.contains('cv-visible') || player.paused();
 
     let barWasVisibleOnDown = false;
-    clickOverlay.addEventListener('pointerdown', () => {
+    let lastPointerType = 'mouse';
+    clickOverlay.addEventListener('pointerdown', (e) => {
       barWasVisibleOnDown = isBarShown();
+      lastPointerType = e.pointerType;
     });
 
     // Свайп по плееру — переключение каналов
@@ -1075,14 +1131,28 @@
         return;
       }
 
-      if (player.paused()) {
-        player.play();
-        showCenterBtn(true);
-      } else {
-        player.pause();
-        showCenterBtn(false);
+            // Мышь (ПК): клик в любое место — пауза/плей, как раньше
+      if (lastPointerType === 'mouse') {
+        player.paused() ? player.play() : player.pause();
+        showBar();
+        return;
       }
-      showBar();
+
+      // Касание: пауза только по центру, где кнопка
+      const r = clickOverlay.getBoundingClientRect();
+      const dist = Math.hypot(
+        e.clientX - (r.left + r.width / 2),
+        e.clientY - (r.top + r.height / 2)
+      );
+      const zone = Math.max(centerBtn.offsetWidth, 56) * 0.75;
+
+      if (dist <= zone) {
+        player.paused() ? player.play() : player.pause();
+        showBar();
+      } else if (!player.paused()) {
+        // клик в пустое место — прячем панель и кнопку
+        hideBar();
+      }
     });
 
     btnPlay.addEventListener('click', (e) => {
@@ -1135,11 +1205,13 @@
 
     player.on('play', () => {
       btnPlay.innerHTML = pauseSvg;
+      centerBtn.innerHTML = pauseSvg;
       showBar();
     });
 
     player.on('pause', () => {
       btnPlay.innerHTML = playSvg;
+      centerBtn.innerHTML = playSvg;
       showBar();
     });
 
@@ -1378,8 +1450,17 @@
       });
     }
 
+    const hadActiveChannel = activeIndex >= 0;
     activeIndex = i;
     const ch = CHANNELS[i];
+
+    // Канал не входит в открытую вкладку (например, переключили стрелками) — переходим на «Все»
+    if (hadActiveChannel && currentFilter !== 'all') {
+      const inCurrentFilter = currentFilter === 'favorites'
+        ? isFavorite(ch.title)
+        : getChannelCategory(ch.title) === currentFilter;
+      if (!inCurrentFilter) setFilter('all');
+    }
 
     infoTitle.textContent = ch.title;
 
@@ -1476,9 +1557,9 @@
   function updateEpgClipping() {
     if (!infoPanelEl || !epgListEl) return;
     const items = epgListEl.querySelectorAll('.epg-item');
-    const overflowing = infoPanelEl.scrollHeight > infoPanelEl.clientHeight + 1;
-    const panelRect = infoPanelEl.getBoundingClientRect();
-    const visibleBottom = panelRect.top + infoPanelEl.clientTop + infoPanelEl.clientHeight;
+    const overflowing = epgListEl.scrollHeight > epgListEl.clientHeight + 1;
+    const panelRect = epgListEl.getBoundingClientRect();
+    const visibleBottom = panelRect.top + epgListEl.clientTop + epgListEl.clientHeight;
 
     items.forEach(item => {
       if (!overflowing) {
@@ -1497,7 +1578,7 @@
   }
 
   if (infoPanelEl && epgListEl) {
-    infoPanelEl.addEventListener('scroll', scheduleEpgClipping, { passive: true });
+    epgListEl.addEventListener('scroll', scheduleEpgClipping, { passive: true });
     window.addEventListener('resize', scheduleEpgClipping);
     new MutationObserver(scheduleEpgClipping).observe(epgListEl, { childList: true });
     if (window.ResizeObserver) new ResizeObserver(scheduleEpgClipping).observe(infoPanelEl);
