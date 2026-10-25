@@ -51,6 +51,7 @@
     "viju TV1000 Action": "cinema",
     "viju TV1000 Novella": "cinema",
     "viju TV1000 Romantica": "cinema",
+    "ЦТВ": "cinema",
     
     // Познавательные
     "Россия К": "edu",
@@ -66,7 +67,7 @@
     "Пятница": "entertainment", "Суббота": "entertainment", "Че": "entertainment", "СТС Love": "entertainment", "Ю": "entertainment",
     
     // Новостные
-    "Россия 24": "news", "Известия": "news", "РБК": "news",
+    "Россия 24": "news", "Известия": "news", "РБК": "news", "Телеканал 78":"news",
     
     // Музыкальные
     "Муз-ТВ": "music",
@@ -300,13 +301,14 @@
     CHANNELS.forEach((ch, i) => {
       const category = getChannelCategory(ch.title);
 
-      if (currentFilter === 'favorites') {
+      if (q) {
+        // Идёт поиск — ищем по всем каналам, независимо от открытой вкладки
+        if (!ch.title.toLowerCase().includes(q)) return;
+      } else if (currentFilter === 'favorites') {
         if (!isFavorite(ch.title)) return;
       } else if (currentFilter !== 'all' && !channelInCategory(ch.title, currentFilter)) {
         return;
       }
-
-      if (q && !ch.title.toLowerCase().includes(q)) return;
 
       const item = document.createElement('div');
       item.className = 'channel-item' + (i === activeIndex ? ' active' : '');
@@ -1022,7 +1024,7 @@
   function initCustomPlayer() {
     player = videojs('video', {
       controls: false,
-      autoplay: false,
+      autoplay: true,
       preload: 'auto',
       fill: true,
       html5: { vhs: { overrideNative: true } }
@@ -1030,14 +1032,6 @@
 
     const el = player.el();
 
-    // Убираем родные контролы браузера (Firefox рисует свой значок «плей»)
-    const nativeVideo = player.tech(true) && player.tech(true).el();
-    if (nativeVideo) {
-      nativeVideo.controls = false;
-      nativeVideo.removeAttribute('controls');
-      nativeVideo.autoplay = false;
-      nativeVideo.removeAttribute('autoplay');
-    }
 
     const clickOverlay = document.createElement('div');
     clickOverlay.className = 'cv-click-overlay';
@@ -1176,8 +1170,7 @@
       // Свайп влево/вправо быстрый и горизонтальный
       if (dt < 600 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         e.stopPropagation();
-        if (dx < 0) selectChannel(activeIndex + 1);
-        else selectChannel(activeIndex - 1);
+        stepChannel(dx < 0 ? 1 : -1);
         // подавляем click после свайпа
         clickOverlay.dataset.suppressClick = '1';
         setTimeout(() => { delete clickOverlay.dataset.suppressClick; }, 50);
@@ -1499,6 +1492,30 @@
     });
   }
 
+    // Переключение на соседний канал внутри открытой вкладки (по кругу)
+  function stepChannel(dir) {
+    const list = [];
+    CHANNELS.forEach((ch, idx) => {
+      if (currentFilter === 'all') list.push(idx);
+      else if (currentFilter === 'favorites') { if (isFavorite(ch.title)) list.push(idx); }
+      else if (channelInCategory(ch.title, currentFilter)) list.push(idx);
+    });
+
+    // Список пуст — листаем все каналы подряд
+    if (list.length === 0) { selectChannel(activeIndex + dir); return; }
+
+    const pos = list.indexOf(activeIndex);
+    let next;
+    if (pos === -1) {
+      // Включённого канала нет в этой вкладке — берём первый или последний из неё
+      next = dir > 0 ? list[0] : list[list.length - 1];
+    } else {
+      next = list[(pos + dir + list.length) % list.length];
+    }
+    if (next === activeIndex) return; // в списке один канал — перезапускать поток не нужно
+    selectChannel(next);
+  }
+
   function selectChannel(i) {
     if (CHANNELS.length === 0) return;
     // Циклический переход
@@ -1579,8 +1596,8 @@
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-    if (e.key === 'ArrowRight') { e.preventDefault(); selectChannel(activeIndex + 1); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); selectChannel(activeIndex - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepChannel(1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); stepChannel(-1); }
     else if (e.code === 'Space') {
       e.preventDefault();
       if (player) player.paused() ? player.play() : player.pause();
