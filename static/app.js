@@ -294,6 +294,51 @@
     }
   }
 
+    // ============================================================
+  // Карусель каналов внутри плеера (полный экран на телефоне/планшете)
+  // ============================================================
+  let fsChannelsEl = null;
+  let fsLastActive = -2;
+
+  function visibleChannelIndexes() {
+    const res = [];
+    CHANNELS.forEach((ch, idx) => {
+      if (currentFilter === 'all') res.push(idx);
+      else if (currentFilter === 'favorites') { if (isFavorite(ch.title)) res.push(idx); }
+      else if (channelInCategory(ch.title, currentFilter)) res.push(idx);
+    });
+    return res;
+  }
+
+  function renderFsChannels() {
+    if (!fsChannelsEl) return;
+    const prevScroll = fsChannelsEl.scrollLeft;
+
+    fsChannelsEl.innerHTML = visibleChannelIndexes().map(idx => {
+      const ch = CHANNELS[idx];
+      const logoFile = getLogoFile(ch.title);
+      const logo = logoFile
+        ? `<img src="static/logos/${logoFile}" alt="${esc(ch.title)}" loading="lazy">`
+        : esc(initials(ch.title));
+      return `<div class="cv-ch-card${idx === activeIndex ? ' active' : ''}" data-index="${idx}">
+        <div class="cv-ch-logo">${logo}</div>
+        <div class="cv-ch-name">${esc(ch.title)}</div>
+      </div>`;
+    }).join('');
+
+    // Лента скрыта (не полный экран) — позицию посчитаем, когда она появится
+    if (fsChannelsEl.offsetParent === null) { fsLastActive = -2; return; }
+
+    const active = fsChannelsEl.querySelector('.cv-ch-card.active');
+    if (active && fsLastActive !== activeIndex) {
+      // канал сменился — ставим его по центру
+      fsChannelsEl.scrollLeft = active.offsetLeft - fsChannelsEl.clientWidth / 2 + active.offsetWidth / 2;
+    } else {
+      fsChannelsEl.scrollLeft = prevScroll;
+    }
+    fsLastActive = activeIndex;
+  }
+
   function renderChannels() {
     channelListEl.innerHTML = '';
     const q = currentSearch.trim().toLowerCase();
@@ -455,6 +500,8 @@
 
       channelListEl.appendChild(item);
     });
+
+    renderFsChannels();
 
     // Обновляем видимость кнопок прокрутки после перерисовки
     if (typeof updateScrollButtons === 'function') {
@@ -1148,6 +1195,27 @@
 
     const isBarShown = () =>
       el.classList.contains('cv-visible') || player.paused();
+
+        // Карусель каналов в плеере (видна в полном экране на телефоне/планшете)
+    fsChannelsEl = document.createElement('div');
+    fsChannelsEl.className = 'cv-channels';
+    el.appendChild(fsChannelsEl);
+    renderFsChannels();
+
+    fsChannelsEl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = e.target.closest('.cv-ch-card');
+      if (!card) return;
+      const idx = parseInt(card.getAttribute('data-index'), 10);
+      if (idx !== activeIndex) selectChannel(idx);
+      showBar();
+    });
+    // пока листаешь ленту, панель не должна скрываться
+    fsChannelsEl.addEventListener('touchstart', showBar, { passive: true });
+    fsChannelsEl.addEventListener('scroll', showBar, { passive: true });
+    player.on('fullscreenchange', () => {
+      if (player.isFullscreen()) requestAnimationFrame(renderFsChannels);
+    });
 
     let barWasVisibleOnDown = false;
     let lastPointerType = 'mouse';
