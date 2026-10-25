@@ -1010,7 +1010,7 @@
   function initCustomPlayer() {
     player = videojs('video', {
       controls: false,
-      autoplay: true,
+      autoplay: false,
       preload: 'auto',
       fill: true,
       html5: { vhs: { overrideNative: true } }
@@ -1023,6 +1023,8 @@
     if (nativeVideo) {
       nativeVideo.controls = false;
       nativeVideo.removeAttribute('controls');
+      nativeVideo.autoplay = false;
+      nativeVideo.removeAttribute('autoplay');
     }
 
     const clickOverlay = document.createElement('div');
