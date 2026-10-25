@@ -225,9 +225,25 @@
 
   function lockLandscape() {
     if (!screen.orientation || !screen.orientation.lock) return;
-    if (landscapeLocked) return; // уже заблокировано — повторный вызов вызывает мигание в Firefox
+    // уже горизонтально и заблокировано — повторять не нужно (в Firefox это вызывает мигание);
+    // если экран при этом стал вертикальным, блокировку надо поставить заново
+    const isLandscape = (screen.orientation.type || '').startsWith('landscape');
+    if (landscapeLocked && isLandscape) return;
     landscapeLocked = true;
     screen.orientation.lock('landscape').catch(() => { landscapeLocked = false; });
+  }
+
+    // В полном экране на сенсорном устройстве экран стал вертикальным (Firefox сбрасывает блокировку
+  // при смене канала) — блокируем горизонтальный режим заново
+  if (screen.orientation && screen.orientation.addEventListener) {
+    screen.orientation.addEventListener('change', () => {
+      if (player && player.isFullscreen() &&
+          window.matchMedia('(pointer: coarse)').matches &&
+          (screen.orientation.type || '').startsWith('portrait')) {
+        landscapeLocked = false;
+        setTimeout(() => { if (player && player.isFullscreen()) lockLandscape(); }, 50);
+      }
+    });
   }
 
   function unlockLandscape() {
@@ -307,6 +323,10 @@
       else if (currentFilter === 'favorites') { if (isFavorite(ch.title)) res.push(idx); }
       else if (channelInCategory(ch.title, currentFilter)) res.push(idx);
     });
+        // Включённого канала нет в открытой вкладке — в плеере листаем все каналы
+    if (activeIndex >= 0 && !res.includes(activeIndex)) {
+      return CHANNELS.map((_, idx) => idx);
+    }
     return res;
   }
 
@@ -331,13 +351,18 @@
 
     const active = fsChannelsEl.querySelector('.cv-ch-card.active');
     if (active && fsLastActive !== activeIndex) {
-      // канал сменился — ставим его по центру
-      fsChannelsEl.scrollLeft = active.offsetLeft - fsChannelsEl.clientWidth / 2 + active.offsetWidth / 2;
+      // канал сменился — плавно прокручиваем ленту, чтобы он оказался по центру
+      const target = active.offsetLeft - fsChannelsEl.clientWidth / 2 + active.offsetWidth / 2;
+      if (fsLastActive === -2) {
+        fsChannelsEl.scrollLeft = target; // первое появление ленты — сразу на месте
+      } else {
+        fsChannelsEl.scrollLeft = prevScroll;
+        fsChannelsEl.scrollTo({ left: target, behavior: 'smooth' });
+      }
     } else {
       fsChannelsEl.scrollLeft = prevScroll;
     }
-    fsLastActive = activeIndex;
-  }
+  } 
 
   function renderChannels() {
     channelListEl.innerHTML = '';
@@ -1628,8 +1653,6 @@
 
     placeholder.style.display = 'none';
     videoContainer.style.display = 'block';
-
-    renderChannels();
 
         renderChannels();
 
