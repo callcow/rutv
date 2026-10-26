@@ -490,7 +490,7 @@ body {
   align-items: center;
   padding: 0 1rem;
   gap: 0.5rem;
-  z-index: 100;
+  z-index: 102; /* выше ленты каналов (101), иначе меню качества прячется под ней */
   opacity: 0;
   transform: translateY(100%);
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -622,6 +622,40 @@ body {
   .cv-remaining { display: none; }
   /* В полном экране (горизонтальный режим) показываем */
   .video-js.vjs-fullscreen .cv-remaining { display: block; font-size: 0.7rem; margin-left: 0.5rem; }
+}
+
+/* Полоска прогресса текущей передачи */
+.cv-progress {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-left: 0.75rem;
+}
+.cv-progress.has-data { display: flex; }
+.cv-progress .cv-remaining { margin-left: 0; }
+
+.cv-prog {
+  width: 6rem;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.cv-prog-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 2px;
+  background: var(--accent-hover);
+  transition: width 1s linear;
+}
+
+@media (max-width: 900px) {
+  /* Телефон: полоска только в полном экране */
+  .cv-progress { display: none !important; }
+  .video-js.vjs-fullscreen .cv-progress.has-data { display: flex !important; }
+  .cv-prog { width: 4rem; }
 }
 
 @keyframes pulse-live {

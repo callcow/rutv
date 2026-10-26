@@ -204,18 +204,43 @@
   let currentProgTitle = '';
   let currentEpgDay = 0;
   let currentProgStop = null;   // когда заканчивается текущая передача (Date)
+  let currentProgStart = null;  // когда началась текущая передача (Date)
   let currentProgStopText = ''; // то же в виде «22:10»
 
     function updatePlayerRemaining() {
     const el = document.getElementById('cvRemaining');
     if (!el) return;
-    if (!currentProgStop) { el.textContent = ''; return; }
+    if (!currentProgStop) {
+      el.textContent = '';
+      const wNo = el.closest('.cv-progress');
+      if (wNo) wNo.classList.remove('has-data');
+      return;
+    }
 
-    const mins = Math.max(0, Math.ceil((currentProgStop - new Date()) / 60000));
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    const left = h ? `${h} ч ${m} мин` : `${m} мин`;
-    el.textContent = `до конца передачи ${left}`;
+        // 75 → «1 ч 15 мин», 60 → «1 ч», 12 → «12 мин»
+    const fmtMins = (total) => {
+      const h = Math.floor(total / 60);
+      const m = total % 60;
+      if (h && m) return `${h} ч ${m} мин`;
+      return h ? `${h} ч` : `${m} мин`;
+    };
+
+    const left = Math.max(0, Math.ceil((currentProgStop - new Date()) / 60000));
+    let text = `ещё ${fmtMins(left)}`;
+    const wrap = el.closest('.cv-progress');
+    if (wrap) wrap.classList.add('has-data');
+
+    let pct = 0;
+    if (currentProgStart) {
+      const totalMs = currentProgStop - currentProgStart;
+      if (totalMs > 0) pct = Math.min(100, Math.max(0, ((Date.now() - currentProgStart) / totalMs) * 100));
+      const totalMin = Math.round(totalMs / 60000);
+      if (wrap && totalMin > 0) wrap.title = `Длительность передачи: ${fmtMins(totalMin)}`;
+    }
+    const fill = document.getElementById('cvProgFill');
+    if (fill) fill.style.width = pct + '%';
+
+    el.textContent = text;
   }
   let epgExpanded = false;
   let lastTapTime = 0;
@@ -318,6 +343,12 @@
   let fsLastKey = '';
 
   function visibleChannelIndexes() {
+    // В плеере всегда показываем все каналы, независимо от открытой вкладки
+    return CHANNELS.map((_, idx) => idx);
+  }
+
+  // Старая версия (каналы открытой вкладки), сейчас не используется
+  function visibleChannelIndexesByTab() {
     const res = [];
     CHANNELS.forEach((ch, idx) => {
       if (currentFilter === 'all') res.push(idx);
@@ -967,11 +998,13 @@
     // Конец передачи берём только если она идёт прямо сейчас
     currentProgStop = null;
     currentProgStopText = '';
+    currentProgStart = null;
     if (currentProg) {
       const s = parseEPGDate(currentProg.start_iso);
       const e = parseEPGDate(currentProg.stop_iso);
       if (s && e && now >= s && now < e) {
         currentProgStop = e;
+        currentProgStart = s;
         currentProgStopText = fmtLocalTime(currentProg.stop_iso, currentProg.stop);
       }
     }
@@ -992,7 +1025,8 @@
   let prebufferCleanup = null; // сброс ожидания буфера при смене канала
   let streamLoadedAt = 0;      // когда последний раз загружали поток
 
-  const PREBUFFER_SECONDS = 8;     // сколько секунд видео накопить перед стартом
+  let currentIsDash = false; // текущий поток идёт через DASH (Video.js), а не через hls.js
+  const PREBUFFER_SECONDS = 3;
   const PREBUFFER_MAX_WAIT = 12000; // но ждать не дольше 12 секунд (мс)
   const USE_HLSJS = typeof Hls !== 'undefined' && Hls.isSupported();
 
@@ -1000,9 +1034,15 @@
     if (!player) return;
     player.el().classList.add('cv-loading'); // индикатор до старта воспроизведения
 
-    if (!USE_HLSJS) {
-      player.src({ src: url, type: 'application/x-mpegURL' });
-      player.play().catch(() => {});
+    // .mpd (DASH) и браузеры без hls.js играем встроенным движком Video.js
+    const isDash = /\.mpd(\?|$)/i.test(url);
+    currentIsDash = isDash;
+    if (isDash || !USE_HLSJS) {
+      if (hls) { hls.destroy(); hls = null; }
+      if (prebufferCleanup) { prebufferCleanup(); prebufferCleanup = null; }
+      streamLoadedAt = Date.now();
+      player.src({ src: url, type: isDash ? 'application/dash+xml' : 'application/x-mpegURL' });
+      player.play().catch(() => player.el().classList.remove('cv-loading'));
       return;
     }
 
@@ -1153,7 +1193,10 @@
       <div class="cv-live-badge">
         <span class="cv-live-dot"></span> LIVE
       </div>
-      <div class="cv-remaining" id="cvRemaining"></div>
+      <div class="cv-progress" id="cvProgress">
+        <div class="cv-prog"><div class="cv-prog-fill" id="cvProgFill"></div></div>
+        <div class="cv-remaining" id="cvRemaining"></div>
+      </div>
 
       <div class="cv-spacer"></div>
       
@@ -1513,7 +1556,7 @@
     };
 
     player.on('loadedmetadata', () => {
-      if (USE_HLSJS) return; // меню строит hls.js
+      if (USE_HLSJS && !currentIsDash) return; // меню строит hls.js
       const levels = player.qualityLevels();
       qualityMenu.innerHTML = '';
       let hasLevels = false;
