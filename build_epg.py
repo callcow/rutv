@@ -88,6 +88,7 @@ def download_epg():
     # --max-time 300 общий таймаут
     cmd = [
         "curl", "-L", "-C", "-",
+        "--http1.1",  # Принудительно используем HTTP/1.1
         "--retry", "5", "--retry-delay", "3",
         "--max-time", "300",
         "-o", str(tmp_gz),
