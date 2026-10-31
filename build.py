@@ -14,7 +14,7 @@ HEADERS = {
 
 def fetch_channels() -> list[dict]:
     print(f"→ Загрузка {CHANNELS_URL}")
-    r = requests.get(CHANNELS_URL, headers=HEADERS, timeout=30)
+    r = requests.get(CHANNELS_URL, headers=HEADERS, timeout=60)
     r.raise_for_status()
     data = r.json()
 
