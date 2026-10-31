@@ -7,6 +7,10 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 EPG_URL = "https://www.teleguide.info/download/new3/xmltv.xml.gz"
 OUTPUT_FILE = Path("epg_data.json")
 DEBUG_CHANNELS_FILE = Path("epg_channels.txt")
@@ -62,16 +66,32 @@ CHANNEL_MAPPING = {
 
 
 def download_epg():
-    """Скачивает и распаковывает EPG (gzip)."""
+    """Скачивает и распаковывает EPG (gzip) с повторами при обрыве."""
     print(f"→ Загрузка EPG: {EPG_URL}")
-    req = urllib.request.Request(EPG_URL, headers={'User-Agent': 'Mozilla/5.0'})
+
+    session = requests.Session()
+    retry = Retry(
+        total=4,
+        backoff_factor=3,                 # паузы 0s, 3s, 6s, 12s
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+    )
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    session.mount("http://",  HTTPAdapter(max_retries=retry))
+
     try:
-        with urllib.request.urlopen(req, timeout=60) as response:
-            data = response.read()
-            if data[:2] == b'\x1f\x8b':
-                data = gzip.decompress(data)
-            print(f"✓ Получено {len(data):,} байт (распаковано)")
-            return data
+        r = session.get(
+            EPG_URL,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=180,                  # было 60 — увеличено
+            stream=False,
+        )
+        r.raise_for_status()
+        data = r.content                  # ключевое: content, а не raw
+        if data[:2] == b"\x1f\x8b":
+            data = gzip.decompress(data)
+        print(f"✓ Получено {len(data):,} байт (распаковано)")
+        return data
     except Exception as e:
         print(f"✗ Ошибка скачивания EPG: {e}", file=sys.stderr)
         return None
