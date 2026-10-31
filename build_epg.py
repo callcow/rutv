@@ -65,36 +65,67 @@ CHANNEL_MAPPING = {
 }
 
 
+import subprocess
+import os
+
 def download_epg():
-    """Скачивает и распаковывает EPG (gzip) с повторами при обрыве."""
+    """Скачивает EPG через curl с докачкой при обрыве, затем распаковывает."""
     print(f"→ Загрузка EPG: {EPG_URL}")
-
-    session = requests.Session()
-    retry = Retry(
-        total=4,
-        backoff_factor=3,                 # паузы 0s, 3s, 6s, 12s
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["GET"],
-    )
-    session.mount("https://", HTTPAdapter(max_retries=retry))
-    session.mount("http://",  HTTPAdapter(max_retries=retry))
-
+    
+    tmp_gz = Path("/tmp/epg.xml.gz")
+    tmp_xml = Path("/tmp/epg.xml")
+    
+    # Удаляем старые временные файлы
+    for f in (tmp_gz, tmp_xml):
+        if f.exists():
+            f.unlink()
+    
+    # Используем curl с флагами:
+    # -L следовать редиректам
+    # -C - возобновить скачивание, если файл уже частично есть
+    # --retry 5 повторять при временных ошибках
+    # --retry-delay 3 пауза между повторами
+    # --max-time 300 общий таймаут
+    cmd = [
+        "curl", "-L", "-C", "-",
+        "--retry", "5", "--retry-delay", "3",
+        "--max-time", "300",
+        "-o", str(tmp_gz),
+        "-H", "User-Agent: Mozilla/5.0",
+        EPG_URL
+    ]
+    
     try:
-        r = session.get(
-            EPG_URL,
-            headers={"User-Agent": "Mozilla/5.0"},
-            timeout=180,                  # было 60 — увеличено
-            stream=False,
-        )
-        r.raise_for_status()
-        data = r.content                  # ключевое: content, а не raw
-        if data[:2] == b"\x1f\x8b":
-            data = gzip.decompress(data)
+        print(f"  Выполняю: {' '.join(cmd)}")
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=320)
+        
+        if result.returncode != 0:
+            print(f"✗ curl вернул код {result.returncode}", file=sys.stderr)
+            print(f"  stderr: {result.stderr}", file=sys.stderr)
+            return None
+            
+        if not tmp_gz.exists() or tmp_gz.stat().st_size == 0:
+            print("✗ curl не создал файл или файл пуст", file=sys.stderr)
+            return None
+            
+        # Распаковываем gzip
+        import gzip
+        with open(tmp_gz, "rb") as f_in:
+            data = gzip.decompress(f_in.read())
+            
         print(f"✓ Получено {len(data):,} байт (распаковано)")
         return data
-    except Exception as e:
-        print(f"✗ Ошибка скачивания EPG: {e}", file=sys.stderr)
+        
+    except subprocess.TimeoutExpired:
+        print("✗ curl не уложился в таймаут", file=sys.stderr)
         return None
+    except Exception as e:
+        print(f"✗ Ошибка при загрузке через curl: {e}", file=sys.stderr)
+        return None
+    finally:
+        # Чистим временный gz
+        if tmp_gz.exists():
+            tmp_gz.unlink()
 
 
 def dump_channels(xml_data):
