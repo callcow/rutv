@@ -11,7 +11,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-EPG_URL = "https://www.teleguide.info/download/new3/xmltv.xml.gz"
+EPG_URL = "https://81.p.giex.ru/download/new3/xmltv.xml.gz"
 OUTPUT_FILE = Path("epg_data.json")
 DEBUG_CHANNELS_FILE = Path("epg_channels.txt")
 
