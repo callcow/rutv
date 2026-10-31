@@ -2,8 +2,8 @@ name: Build TV page
 
 on:
   schedule:
-    # Каждый день в 23:00 МСК (20:00 UTC)
-    - cron: '0 16 * * *'
+    # Каждый день в 17:00 МСК (14:00 UTC)
+    - cron: '0 14 * * *'
   workflow_dispatch:
 
 permissions:
