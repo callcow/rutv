@@ -28,7 +28,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install deps
-        run: pip install requests
+        run: pip install requests urllib3
 
       - name: Build EPG
         id: epg
