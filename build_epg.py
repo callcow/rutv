@@ -209,9 +209,11 @@ def parse_epg(xml_data):
 
         desc_el = prog.find('desc')
         prog_desc = (desc_el.text or '').strip() if desc_el is not None else ''
-        # Ограничим длину на всякий случай
+        # Убираем обрезанный «хвост» вида «"Название" - » в конце описания
         if prog_desc:
-            prog_desc = re.sub(r'\s+', ' ', prog_desc)[:800]
+            prog_desc = re.sub(r'\s+', ' ', prog_desc)
+            prog_desc = re.sub(r'\s*[-–—]\s*$', '', prog_desc).strip()
+            prog_desc = prog_desc[:800]
 
         key = (our_title, start_dt)
         if key not in temp:
