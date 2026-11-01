@@ -211,11 +211,14 @@ def parse_epg(xml_data):
         prog_desc = (desc_el.text or '').strip() if desc_el is not None else ''
         if prog_desc:
             prog_desc = re.sub(r'\s+', ' ', prog_desc).strip()
-            # Если описание не заканчивается точкой — значит обрезано, режем до последней точки
+            # Жёстко: описание должно заканчиваться ровно одной точкой.
+            # Если не заканчивается одной точкой — обрезаем до последней точки (включительно).
             if not prog_desc.endswith('.'):
                 last_dot = prog_desc.rfind('.')
                 if last_dot != -1:
                     prog_desc = prog_desc[:last_dot + 1]
+                else:
+                    prog_desc = ''
             prog_desc = prog_desc[:800]
 
         key = (our_title, start_dt)
