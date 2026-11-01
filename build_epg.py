@@ -159,6 +159,19 @@ def clean_title(raw: str) -> str:
     return t or "Без названия"
 
 
+def trim_to_single_dot(text: str) -> str:
+    """Оставляет текст, который заканчивается ровно одной точкой.
+    Если конец — не одиночная точка (троеточие, «…», любой другой символ),
+    обрезает до последней одиночной точки включительно. Если точек нет — пустая строка."""
+    text = text.rstrip()
+    if text.endswith('.') and not text.endswith('..'):
+        return text
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] == '.' and (i == 0 or text[i - 1] != '.') and (i + 1 == len(text) or text[i + 1] != '.'):
+            return text[:i + 1]
+    return ''
+
+
 def parse_epg(xml_data):
     """Парсит XMLTV и возвращает {название_канала: [передачи]}."""
     if not xml_data:
@@ -211,23 +224,10 @@ def parse_epg(xml_data):
         prog_desc = (desc_el.text or '').strip() if desc_el is not None else ''
         if prog_desc:
             prog_desc = re.sub(r'\s+', ' ', prog_desc).strip()
-            # Жёстко: описание должно заканчиваться ровно одной точкой.
-            # Если не заканчивается одной точкой — обрезаем до последней точки,
-            # которая стоит ПОСЛЕ последнего предложения с «...»/«,» и т.п.
-            # Проще: ищем последнюю точку, за которой следует конец строки или пробел+заглавная,
-            # но так как описание обрезано в середине предложения, последняя точка всегда
-            # завершает последнее полное предложение.
-            if not prog_desc.endswith('.'):
-                # Ищем последнюю точку, за которой НЕ следует ещё одна точка (не «...»)
-                last_dot = -1
-                for m in re.finditer(r'\.(?!\.)', prog_desc):
-                    last_dot = m.start()
-                if last_dot != -1:
-                    prog_desc = prog_desc[:last_dot + 1]
-                else:
-                    prog_desc = ''
+            # Сначала ограничиваем длину, потом проверяем конец, чтобы обрезка не сломала точку
             prog_desc = prog_desc[:800]
-
+            # Конец должен быть ровно одной точкой, иначе обрезаем до последней точки
+            prog_desc = trim_to_single_dot(prog_desc)
         key = (our_title, start_dt)
         if key not in temp:
             temp[key] = {
