@@ -209,10 +209,13 @@ def parse_epg(xml_data):
 
         desc_el = prog.find('desc')
         prog_desc = (desc_el.text or '').strip() if desc_el is not None else ''
-        # Убираем обрезанный «хвост» вида «"Название" - » в конце описания
         if prog_desc:
-            prog_desc = re.sub(r'\s+', ' ', prog_desc)
-            prog_desc = re.sub(r'\s*[-–—]\s*$', '', prog_desc).strip()
+            prog_desc = re.sub(r'\s+', ' ', prog_desc).strip()
+            # Если описание не заканчивается точкой — значит обрезано, режем до последней точки
+            if not prog_desc.endswith('.'):
+                last_dot = prog_desc.rfind('.')
+                if last_dot != -1:
+                    prog_desc = prog_desc[:last_dot + 1]
             prog_desc = prog_desc[:800]
 
         key = (our_title, start_dt)
