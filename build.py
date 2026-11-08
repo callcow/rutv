@@ -13,10 +13,46 @@ HEADERS = {
 }
 
 def fetch_channels() -> list[dict]:
+    import time
+
     print(f"→ Загрузка {CHANNELS_URL}")
-    r = requests.get(CHANNELS_URL, headers=HEADERS, timeout=60)
-    r.raise_for_status()
-    data = r.json()
+
+    max_retries = 5
+    backoff = 2.0
+    last_error = None
+    data = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            r = requests.get(CHANNELS_URL, headers=HEADERS, timeout=60)
+
+            # 429 — уважаем Retry-After и делаем экспоненциальную паузу
+            if r.status_code == 429:
+                retry_after = r.headers.get("Retry-After", "")
+                try:
+                    wait = float(retry_after)
+                except (TypeError, ValueError):
+                    wait = backoff
+                if attempt < max_retries:
+                    print(f"⚠ 429 Too Many Requests (попытка {attempt}/{max_retries}), пауза {wait:.1f}с")
+                    time.sleep(wait)
+                    backoff = min(backoff * 2, 60.0)
+                    continue
+
+            r.raise_for_status()
+            data = r.json()
+            break
+
+        except requests.exceptions.RequestException as e:
+            last_error = e
+            if attempt < max_retries:
+                print(f"⚠ Ошибка запроса (попытка {attempt}/{max_retries}): {e}, пауза {backoff:.1f}с")
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 60.0)
+    else:
+        raise RuntimeError(
+            f"Не удалось загрузить {CHANNELS_URL} после {max_retries} попыток: {last_error}"
+        )
 
     if not isinstance(data, list):
         raise ValueError(f"Ожидался массив, получено: {type(data).__name__}")
